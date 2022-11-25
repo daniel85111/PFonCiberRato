@@ -1,0 +1,19 @@
+<Lab Name="RMI-2223 C1 Lab" Height="14" Width="28">
+	<Beacon X="25" Y="6.0" Height="4.0"/>
+	<Target X="25" Y="6.0" Radius="1.0"/>
+
+	<Wall Height="-2.00">
+		<Corner X="13.50" Y="9.50"/>
+		<Corner X="20.00" Y="9.50"/>
+		<Corner X="20.00" Y="4.00"/>
+		<Corner X="13.50" Y="4.00"/>
+	</Wall>
+	<Wall Height="-2.00">
+		<Corner X="4.50" Y="9.50"/>
+		<Corner X="10.00" Y="9.50"/>
+		<Corner X="10.00" Y="4.00"/>
+		<Corner X="4.50" Y="4.00"/>
+	</Wall>
+	
+</Lab>
+

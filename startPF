@@ -1,0 +1,22 @@
+#!/bin/bash
+
+ARGS="--param ../Labs/2223-pf/C1-config.xml"
+ARGS+=" --lab ../Labs/2223-pf/C1-lab.xml"
+ARGS+=" --grid ../Labs/2223-pf/C1-grid.xml"
+#ARGS+=" --scoring 1"
+ARGS+=" --gps"
+ARGS+=" --compass"
+(cd simulator; ./simulator $ARGS) &
+
+sleep 1
+
+(cd Viewer; ./Viewer --autoconnect) &
+
+sleep 1
+
+(cd pClient; ./s1.sh )
+
+
+killall simulator
+killall Viewer
+echo Bye
