@@ -22,7 +22,26 @@ class filtroParticulas():
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
         self.norm_weights = []
+        self.areas = [
 
+            # (13.5,4) a (20,9.5)
+            [[13.5, 14-9.5], [20, 14-4]],
+
+            # (4.5,4) a (10,9.5)
+            [[4.5, 14-9.5], [10, 14-4]],
+            
+            # (0,2) a (28,2.5)
+            [[0, 14-2.5], [28, 14-2]],
+            
+            # (0,10) a (28,11)
+            [[0, 14-11], [28, 14-10]],
+            
+            # (25.5,0) a (28,14)
+            [[25.5, 14-14], [28, 14-0]],
+            
+            # (2,0) a (4,14)
+            [[2, 14-14], [4, 14-0]]          
+            ]
         for i in range (self.n_part):
             self.particulas.append(particula(random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
 
@@ -100,7 +119,8 @@ class filtroParticulas():
             self.particulas = newParticles
 
     def w_calc(self, flag_loc):
-        self.max_w = 1     
+        self.max_w = 1
+           
         for i,v in enumerate(self.particulas):
             if (v.x > self.mapmax_x-0.4 or v.x < 0+0.4 or v.y > self.mapmax_y-0.4 or v.y < 0+0.4):   # Está fora do mapa
                 out_o_b = True
@@ -110,17 +130,25 @@ class filtroParticulas():
                 out_o_b = False
                 
             if not out_o_b:        # Estando dentro do mapa
+                sum = 0  
                 if flag_loc == 1:       # Robot real Dentro da area
-                    if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
-                        v.weight += 1
+                    #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
+                    for j,k in enumerate(self.areas):
+                        if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
+                            sum += 1
 
+                    if sum > 0:
+                        v.weight += 1
                     else:                   # Particula fora da area
                         v.weight -= 5
 
                 else:               # Robot real Fora da area
-                    if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
-                        v.weight -= 5
-                        
+                    #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
+                    for j,k in enumerate(self.areas):
+                        if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
+                            v.weight -= 5
+                    if sum > 0:
+                        v.weight -= 5 
                     else:
                         v.weight += 1
             if v.weight < 1:
@@ -170,8 +198,11 @@ class filtroParticulas():
         #print(f'\nGPS: x: {40*x+40*cos(ori)}   y: {40*y+40*sin(ori)}   theta: {ori}')
 
     def drawMap(self):
-        cv2.rectangle(self.img,(int(40*13.5),40*4),(40*20,int(40*9.5)),(255,0,0),-1)
-        cv2.rectangle(self.img,(int(40*4.5),40*4),(40*10,int(40*9.5)),(255,0,0),-1)
+        
+
+        for j,k in enumerate(self.areas):
+            cv2.rectangle(self.img,(int(40*k[0][0]),int(40*k[0][1])),(int(40*k[1][0]),int(40*k[1][1])),(255,0,0),-1) 
+
 
 
     def showImg(self):

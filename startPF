@@ -8,11 +8,11 @@ ARGS+=" --gps"
 ARGS+=" --compass"
 (cd simulator; ./simulator $ARGS) &
 
-sleep 1
+sleep 2
 
 (cd Viewer; ./Viewer --autoconnect) &
 
-sleep 1
+sleep 2
 
 (cd pClient; ./s1.sh )
 
