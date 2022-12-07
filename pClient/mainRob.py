@@ -44,8 +44,8 @@ class MyRob(CRobLinkAngs):
         self.mapmax_x = 28
         self.mapmax_y = 14
         self.particulas = particleFilter.filtroParticulas()
-        self.i = 0
-        self.inputfilter = []
+        #self.i = 0
+        #self.inputfilter = []
         
         
         
@@ -178,20 +178,11 @@ class MyRob(CRobLinkAngs):
 
         
         sens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
+        print(f'\n{sens}\n')
+        left_1,left_2,left_,center,right_3,right2,right_1 = sens
 
-        if self.i < 5:
-            self.inputfilter.append(sens)                       # Buffer Leitura linha de sensores
-            self.i += 1
-        else:
-            self.inputfilter.pop(0)
-            self.inputfilter.append(sens)
-        total = 0
 
-        for i in range(self.i-1):
-            total += sum(self.inputfilter[i])                   # Soma de 1's presentes no buffer
-        #print(f"Buffer sensor de linha: {total}")
-
-        if total > 10:
+        if (center == 1):
             flag_loc = 1
         else:
             flag_loc = 0
@@ -200,7 +191,7 @@ class MyRob(CRobLinkAngs):
 
         self.odometry_move(self.motors)                         # Movimento calculado por odometria
         self.particulas.odometry_move(self.motors)              # Mover particulas               
-        self.particulas.w_calc(flag_loc)                        # Calcular pesos de cada particula
+        self.particulas.w_calc(flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
         self.particulas.w_norm()                                # Normalizar peso de cada particula
         self.particulas.resample()                              # Resample de particulas
         

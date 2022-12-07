@@ -67,8 +67,8 @@ class filtroParticulas():
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, (0.75/self.maxOfmax_w)*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, (0.75/self.maxOfmax_w)*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, (0.65/(self.maxOfmax_w))*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, (0.65/(self.maxOfmax_w))*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -119,7 +119,7 @@ class filtroParticulas():
           
             self.particulas = newParticles
 
-    def w_calc(self, flag_loc):
+    def w_calc(self, flag_loc,robot_compass):
         self.max_w = 1
            
         for i,v in enumerate(self.particulas):
@@ -135,21 +135,24 @@ class filtroParticulas():
                 if flag_loc == 1:       # Robot real Dentro da area
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
                     for j,k in enumerate(self.areas):
-                        if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
+                        #if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
+                        if ( (v.x > k[0][0]-0.438*cos(radians(robot_compass)) and v.x < k[1][0]-0.438*cos(radians(robot_compass))and v.y > k[0][1]+0.438*sin(radians(robot_compass)) and v.y < k[1][1]+0.438*sin(radians(robot_compass))) ):
                             sum += 1
 
                     if sum > 0:
                         v.weight += 1
                     else:                   # Particula fora da area
-                        v.weight -= 5
+                        v.weight -= 10
 
                 else:               # Robot real Fora da area
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
                     for j,k in enumerate(self.areas):
-                        if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
-                            v.weight -= 5
+                        if ( (v.x > k[0][0]-0.438*cos(radians(robot_compass)) and v.x < k[1][0]-0.438*cos(radians(robot_compass))and v.y > k[0][1]+0.438*sin(radians(robot_compass)) and v.y < k[1][1]+0.438*sin(radians(robot_compass))) ):
+                            sum += 1
+
                     if sum > 0:
-                        v.weight -= 5 
+                        v.weight -= 10 
+
                     else:
                         v.weight += 1
             if v.weight < 1:
