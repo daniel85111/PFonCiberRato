@@ -42,7 +42,7 @@ class MyRob(CRobLinkAngs):
 
         # Lista de particulas
         self.mapmax_x = 28
-        self.mapmax_y=14
+        self.mapmax_y = 14
         self.particulas = particleFilter.filtroParticulas()
         self.i = 0
         self.inputfilter = []
@@ -167,7 +167,7 @@ class MyRob(CRobLinkAngs):
                 # real pos
                 if self.firstRun == 0:                          # Se já arrancou
                     self.posx = self.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-                    self.posy = -(self.y - self.initialy + (6-14))          # Coordenada Y em relação à posição inicial 
+                    self.posy = self.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
 
                 #print(f'Xg: {self.posx:.2f}    Yg: {self.posy:.2f}    thetag: {self.ori}')
 

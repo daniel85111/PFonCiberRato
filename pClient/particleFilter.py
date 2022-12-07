@@ -42,6 +42,7 @@ class filtroParticulas():
             # (2,0) a (4,14)
             [[2, 14-14], [4, 14-0]]          
             ]
+        self.maxOfmax_w = 1
         for i in range (self.n_part):
             self.particulas.append(particula(random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
 
@@ -66,8 +67,8 @@ class filtroParticulas():
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, 0.075*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, 0.075*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, (0.75/self.maxOfmax_w)*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, (0.75/self.maxOfmax_w)*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -156,6 +157,8 @@ class filtroParticulas():
 
             if v.weight > self.max_w:
                 self.max_w = v.weight
+            if  self.max_w > self.maxOfmax_w:
+                self.maxOfmax_w = self.max_w
             
     def w_norm(self):
         s_w = 0
@@ -191,7 +194,7 @@ class filtroParticulas():
 
     def drawReal(self,x,y,ori):
         cx = int(40*x)
-        cy = int(40*y)
+        cy = abs(int(40*(14-y)))
         
         cv2.circle(self.img,(cx,cy), 20, (150,150,0), -1) # Circulo centrado no centro do robot real
         cv2.line( self.img, (cx,cy), (cx+int(20*cos(radians(ori))), cy-int(20*sin(radians(ori)))), (255,0,0),2) # Linha do centro do robot direcionada segundo orientaçao
