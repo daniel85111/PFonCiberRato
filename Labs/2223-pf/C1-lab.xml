@@ -40,6 +40,35 @@
 		<Corner X="4.00" Y="14.00"/>
 		<Corner X="2.00" Y="14.00"/>
 	</Wall>
+
+	<Wall Height="-2.00">
+		<Corner X="21.00" Y="0.00"/>
+		<Corner X="22.00" Y="0.00"/>
+		<Corner X="22.00" Y="14.00"/>
+		<Corner X="21.00" Y="14.00"/>
+	</Wall>
+	<Wall Height="-2.00">
+		<Corner X="23.00" Y="0.00"/>
+		<Corner X="24.00" Y="0.00"/>
+		<Corner X="24.00" Y="14.00"/>
+		<Corner X="23.00" Y="14.00"/>
+	</Wall>
+
+	<Wall Height="-2.00">
+		<Corner X="12.00" Y="0.00"/>
+		<Corner X="13.00" Y="0.00"/>
+		<Corner X="13.00" Y="14.00"/>
+		<Corner X="12.00" Y="14.00"/>
+	</Wall>
+
+	<Wall Height="-2.00">
+		<Corner X="10.50" Y="0.00"/>
+		<Corner X="11.50" Y="0.00"/>
+		<Corner X="11.50" Y="14.00"/>
+		<Corner X="10.50" Y="14.00"/>
+	</Wall>
+	
+
 	
 </Lab>
 

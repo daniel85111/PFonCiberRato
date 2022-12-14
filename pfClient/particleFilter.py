@@ -1,6 +1,7 @@
 #import particles
 import numpy as np
 from math import *
+from lxml import etree
 import random
 import cv2
 
@@ -22,26 +23,9 @@ class filtroParticulas():
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
         self.norm_weights = []
-        self.areas = [
+        self.max_normalized_weight = 1/self.n_part
+        self.areas = self.getAreas()
 
-            # (13.5,4) a (20,9.5)
-            [[13.5, 14-9.5], [20, 14-4]],
-
-            # (4.5,4) a (10,9.5)
-            [[4.5, 14-9.5], [10, 14-4]],
-            
-            # (0,2) a (28,2.5)
-            [[0, 14-2.5], [28, 14-2]],
-            
-            # (0,10) a (28,11)
-            [[0, 14-11], [28, 14-10]],
-            
-            # (25.5,0) a (28,14)
-            [[25.5, 14-14], [28, 14-0]],
-            
-            # (2,0) a (4,14)
-            [[2, 14-14], [4, 14-0]]          
-            ]
         self.maxOfmax_w = 1
         for i in range (self.n_part):
             self.particulas.append(particula(random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
@@ -59,7 +43,49 @@ class filtroParticulas():
         self.immax_y = 40 * self.mapmax_y
         self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8)
 
-    def odometry_move(self, motors):       
+    def parseXML(self,xmlFile):
+        """
+        Parse the XML
+        """
+        dic = []
+        with open(xmlFile) as fobj:
+            xml = fobj.read()
+        root = etree.fromstring(xml)
+        
+        for labs in root.getchildren():
+            if(labs.tag=="Wall"):
+                for elem in labs.getchildren():
+                    #print(elem.tag=="Corner")
+                    if(elem.tag=="Corner"):
+                        dic.append(elem.attrib)
+        return dic
+
+    def getAreas(self):
+        array = self.parseXML("../Labs/2223-pf/C1-lab.xml")
+        areas = []
+        for i,v in enumerate(array):
+            if i%4 == 0:
+                if i != 0:
+                    areas.append([[minx,14-maxy],[maxx,14-miny]])
+                minx = float(v['X'])
+                miny = float(v['Y'])
+                maxx = float(v['X'])
+                maxy = float(v['Y'])
+
+            if float(v['X']) < minx: minx = float(v['X'])
+            if float(v['Y']) < miny: miny = float(v['Y'])
+            if float(v['X']) > maxx: maxx = float(v['X'])
+            if float(v['Y']) > maxy: maxy = float(v['Y'])
+            
+            if i == len(array)-1:
+                areas.append([[minx,14-maxy],[maxx,14-miny]])
+                #print(areas)
+        return areas
+
+
+
+
+    def odometry_move(self, motors, motors_noise):       
         self.motors = motors
 
         for i,v in enumerate (self.particulas):
@@ -67,8 +93,8 @@ class filtroParticulas():
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, (0.65/(self.maxOfmax_w))*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, (0.65/(self.maxOfmax_w))*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, 2*motors_noise*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, 2*motors_noise*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -89,18 +115,16 @@ class filtroParticulas():
             v.y = y
             v.ori = ori
             
-            
             self.last_motors = (out_l,out_r)
-        
 
     def resample(self):
         #print(f'sum(S_W**2) -> {self.sum_square_w}')
-        print(1./self.sum_square_w)
-        n = 0.95 * self.n_part
-        if (1./self.sum_square_w < n):
+        #print(1./self.sum_square_w)
+        n = 0.9999 * self.n_part
+        #if (1./self.sum_square_w < n):
         #if False:
-        #if True:
-            print("---------- ReSampling!!!!!- -----------")
+        if True:
+            #print("---------- ReSampling!!!!!- -----------")
             indices = []
             C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
             u0, j = random.random(), 0
@@ -121,7 +145,7 @@ class filtroParticulas():
 
     def w_calc(self, flag_loc,robot_compass):
         self.max_w = 1
-           
+        if flag_loc == None : return
         for i,v in enumerate(self.particulas):
             if (v.x > self.mapmax_x-0.4 or v.x < 0+0.4 or v.y > self.mapmax_y-0.4 or v.y < 0+0.4):   # Está fora do mapa
                 out_o_b = True
@@ -136,25 +160,25 @@ class filtroParticulas():
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
                     for j,k in enumerate(self.areas):
                         #if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
-                        if ( (v.x > k[0][0]-0.438*cos(radians(robot_compass)) and v.x < k[1][0]-0.438*cos(radians(robot_compass))and v.y > k[0][1]+0.438*sin(radians(robot_compass)) and v.y < k[1][1]+0.438*sin(radians(robot_compass))) ):
+                        if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
                             sum += 1
 
                     if sum > 0:
-                        v.weight += 1
+                        v.weight += 0.98
                     else:                   # Particula fora da area
-                        v.weight -= 10
+                        v.weight += 0.02
 
                 else:               # Robot real Fora da area
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
                     for j,k in enumerate(self.areas):
-                        if ( (v.x > k[0][0]-0.438*cos(radians(robot_compass)) and v.x < k[1][0]-0.438*cos(radians(robot_compass))and v.y > k[0][1]+0.438*sin(radians(robot_compass)) and v.y < k[1][1]+0.438*sin(radians(robot_compass))) ):
+                        if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
                             sum += 1
 
                     if sum > 0:
-                        v.weight -= 10 
+                        v.weight += 0.02 
 
                     else:
-                        v.weight += 1
+                        v.weight += 0.98
             if v.weight < 1:
                 v.weight = 0.5
 
@@ -174,28 +198,28 @@ class filtroParticulas():
         
         
         for i,v in enumerate(self.particulas): 
-            self.norm_weights[i] = v.weight/self.s_w
+            nw = v.weight/self.s_w
+            self.norm_weights[i] = nw
+            if nw > self.max_normalized_weight:
+                self.max_normalized_weight = nw
             ssw += self.norm_weights[i]**2 
 
         self.sum_square_w = ssw
  
     def drawParticles(self):
-        print(self.max_w)
+        #print(self.max_w)
 
         for i,v in enumerate(self.particulas):
             x = int(40*v.x)
             y = int(40*v.y)
             ori = v.ori
 
-            if v.weight < 1:
-                cv2.circle(self.img, (x,y), 5, (0,0,255), -1)
-                cv2.line( self.img, (x,y), (x+int(10*cos(radians(ori))), y-int(10*sin(radians(ori)))), (255,0,0),2)
+            cv2.circle(self.img, (x,y), 5, (0,0.95*254+0.05*254*(self.norm_weights[i]/self.max_normalized_weight),0.05*254+0.95*254*(self.norm_weights[i]/self.max_normalized_weight)), -1)
+            cv2.line( self.img, (x,y), (x+int(10*cos(radians(ori))), y-int(10*sin(radians(ori)))), (255,0,0),2)
 
-            else:
-                cv2.circle(self.img,(x,y), 5, (0,255,0), -1)
-                cv2.line( self.img, (x,y), (x+int(10*cos(radians(ori))), y-int(10*sin(radians(ori)))), (255,0,0),2)
 
     def drawReal(self,x,y,ori):
+        if x == None or y == None or ori == None : return
         cx = int(40*x)
         cy = abs(int(40*(14-y)))
         

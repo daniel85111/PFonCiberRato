@@ -14,7 +14,7 @@ sleep 2
 
 sleep 2
 
-(cd pClient; ./s1.sh )
+(cd pfClient; ./s1.sh )
 
 
 killall simulator

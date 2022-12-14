@@ -3,11 +3,6 @@ import sys
 from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
-#import particles
-import particleFilter
-import numpy as np
-import random
-import cv2
 
 CELLROWS=7
 CELLCOLS=14
@@ -15,45 +10,9 @@ CELLCOLS=14
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, angles, host):
         CRobLinkAngs.__init__(self, rob_name, rob_id, angles, host)
-        self.rob_name = rob_name
-          
-        self.motors = (0.0,0.0)
-        self.last_motors = (0.0,0.0)
 
-        # Position
-        self.firstRun = 1
-        self.initialx = None
-        self.initialy = None
-        self.x = None
-        self.y = None
-        self.posx = None
-        self.posy = None
-        self.x_od_pos = 0
-        self.y_od_pos = 0
-        self.ori= 0
-        self.robot_diameter = 1
-        self.border = None
-
-        self.x_posmin = 0
-        self.y_posmin = 0
-        self.x_posmax = 0
-        self.y_posmax = 0
-
-
-        # Lista de particulas
-        self.mapmax_x = 28
-        self.mapmax_y = 14
-        self.particulas = particleFilter.filtroParticulas()
-        #self.i = 0
-        #self.inputfilter = []
-        
-        
-        
-        # Tamanho imagem = 28 x 14 -> 1120 x 560 = simulação*40         x40  
-        self.immax_x = 1120
-        self.immax_y = 560
-        self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8)
-
+    # In this map the center of cell (i,j), (i in 0..6, j in 0..13) is mapped to labMap[i*2][j*2].
+    # to know if there is a wall on top of cell(i,j) (i in 0..5), check if the value of labMap[i*2+1][j*2] is space or not
     def setMap(self, labMap):
         self.labMap = labMap
 
@@ -71,13 +30,7 @@ class MyRob(CRobLinkAngs):
 
         while True:
             self.readSensors()
-            if self.measures.gpsReady:
-                self.x = self.measures.x
-                self.y = self.measures.y
-            
-            if self.measures.compassReady:
-                self.ori= self.measures.compass
-            
+
             if self.measures.endLed:
                 print(self.rob_name + " exiting")
                 quit()
@@ -111,128 +64,25 @@ class MyRob(CRobLinkAngs):
             
 
     def wander(self):
-        
-
         center_id = 0
         left_id = 1
         right_id = 2
         back_id = 3
-
         if    self.measures.irSensor[center_id] > 5.0\
            or self.measures.irSensor[left_id]   > 5.0\
            or self.measures.irSensor[right_id]  > 5.0\
            or self.measures.irSensor[back_id]   > 5.0:
             print('Rotate left')
-            #self.driveMotors(-0.1,+0.1)
-            lpow = -0.1
-            rpow = +0.1
-            self.motors = (lpow, rpow) 
-            self.driveMotors(lpow,rpow)
-
+            self.driveMotors(-0.1,+0.1)
         elif self.measures.irSensor[left_id]> 2.7:
             print('Rotate slowly right')
-            #self.driveMotors(0.1,0.0)
-            lpow = 0.1
-            rpow = 0.0
-            self.motors = (lpow, rpow)
-            self.driveMotors(lpow,rpow)
-
+            self.driveMotors(0.1,0.0)
         elif self.measures.irSensor[right_id]> 2.7:
             print('Rotate slowly left')
-            #self.driveMotors(0.0,0.1)
-            lpow = 0.0
-            rpow = 0.1
-            self.motors = (lpow, rpow)
-            self.driveMotors(lpow,rpow)
-
+            self.driveMotors(0.0,0.1)
         else:
-            #$print('Go')
-            if (self.measures.stop) :
-                lpow = 0.0
-                rpow = 0.0
-                self.motors = (lpow, rpow)
-                self.driveMotors(self.motors)
-            else:
-                if self.firstRun:                               # Primeiro movimento
-                    if self.x is not None:
-                        self.initialx = self.x                              # Receber coordenada X do GPS
-                        print(self.initialx )
-                    if self.y is not None:
-                        self.initialy = self.y                              # Receber coordenada Y do GPS
-                        print(self.initialy )
-
-                    if self.y is not None and self.x is not None:
-                        self.firstRun = 0                                   # Já deu o arranque
-
-                # real pos
-                if self.firstRun == 0:                          # Se já arrancou
-                    self.posx = self.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-                    self.posy = self.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
-
-                #print(f'Xg: {self.posx:.2f}    Yg: {self.posy:.2f}    thetag: {self.ori}')
-
-                lpow = 0.1
-                rpow = 0.1
-                self.motors = (lpow, rpow) 
-                self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
-
-        
-        sens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
-        print(f'\n{sens}\n')
-        left_1,left_2,left_,center,right_3,right2,right_1 = sens
-
-
-        if (center == 1):
-            flag_loc = 1
-        else:
-            flag_loc = 0
-
-        
-
-        self.odometry_move(self.motors)                         # Movimento calculado por odometria
-        self.particulas.odometry_move(self.motors)              # Mover particulas               
-        self.particulas.w_calc(flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
-        self.particulas.w_norm()                                # Normalizar peso de cada particula
-        self.particulas.resample()                              # Resample de particulas
-        
-        # Imagem Open CV
-        self.particulas.clearImg()                              # Limpar imagem visualizada
-        self.particulas.drawMap()                               # Desenhar mapa 
-        self.particulas.drawReal(self.posx,self.posy,self.ori)  # Desenhar posição real do robot
-        self.particulas.drawParticles()                         # Desenhar todas as particulas
-        self.particulas.showImg()                               # Mostrar imagem
-                
-
-    def odometry_move(self, motors):
-        
-        self.motors = motors        
-
-        # calculate estimated power apply
-        out_l = (self.motors[0] + self.last_motors[0]) / 2
-        out_r = (self.motors[1] + self.last_motors[1]) / 2
-        
-        #out_l = random.gauss(out_l, 0.0015*out_l)   # out_l tem um erro de 1,5%
-        #out_r = random.gauss(out_r, 0.0015*out_r)    # out_r tem um erro de 1,5%
-        if out_l > 0.15:
-            out_l = 0.15
-        if out_r > 0.15:
-            out_r = 0.15
-            
-        # pos
-        lin = (out_l + out_r) / 2
-        x = self.x_od_pos + 2*(lin * cos(radians(self.ori)))
-        y = self.y_od_pos - 2*(lin * sin(radians(self.ori)))
-        
-        rot = (out_r - out_l) / self.robot_diameter         # self.robot_diameter = 1 
-        self.ori = degrees(radians(self.ori) + rot) % 360
-        ori = self.ori
-        #print(f'x0: {x:.2f}    y0: {y:.2f}    theta0: {ori}' )
-
-        self.x_od_pos = x # Posicao X por odometria
-        self.y_od_pos = y # Posicao Y por odometria
-
-
-            
+            print('Go')
+            self.driveMotors(0.1,0.1)
 
 class Map():
     def __init__(self, filename):
