@@ -25,6 +25,8 @@ class filtroParticulas():
         self.norm_weights = []
         self.max_normalized_weight = 1/self.n_part
         self.areas = self.getAreas()
+        self.map = self.getMap()
+        print(self.map)
 
         self.maxOfmax_w = 1
         for i in range (self.n_part):
@@ -82,7 +84,23 @@ class filtroParticulas():
                 #print(areas)
         return areas
 
+    def getMap(self):
+        line = []
+        for l in range(10*self.mapmax_y):
+            collum = []
+            for c in range(10*self.mapmax_x):
+                sum = 0
+                for j,k in enumerate(self.areas):
 
+                    if c >= 10*float(k[0][0]) and c+1 <= 10*float(k[1][0]) and l >= 10*float(k[0][1]) and l+1 <= 10*float(k[1][1]):
+                        sum += 1
+                        break
+                if sum != 0:
+                    collum.append(1)
+                else:
+                    collum.append(0)
+            line.append(collum)
+        return line
 
 
     def odometry_move(self, motors, motors_noise):       
@@ -120,7 +138,7 @@ class filtroParticulas():
     def resample(self):
         #print(f'sum(S_W**2) -> {self.sum_square_w}')
         #print(1./self.sum_square_w)
-        n = 0.9999 * self.n_part
+        n = 0.95 * self.n_part
         #if (1./self.sum_square_w < n):
         #if False:
         if True:
@@ -149,7 +167,7 @@ class filtroParticulas():
         for i,v in enumerate(self.particulas):
             if (v.x > self.mapmax_x-0.4 or v.x < 0+0.4 or v.y > self.mapmax_y-0.4 or v.y < 0+0.4):   # Está fora do mapa
                 out_o_b = True
-                v.weight = 0.5
+                #v.weight += 0.02
 
             else: # Está dentro do mapa
                 out_o_b = False
@@ -158,23 +176,24 @@ class filtroParticulas():
                 sum = 0  
                 if flag_loc == 1:       # Robot real Dentro da area
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
-                    for j,k in enumerate(self.areas):
-                        #if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
-                        if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
-                            sum += 1
+                    # for j,k in enumerate(self.areas):
+                    #     #if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
+                    #     if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
+                    #         sum += 1
 
-                    if sum > 0:
+                    # if sum > 0:
+                    if self.map[int(10*v.y)][int(10*v.x)]==1:
                         v.weight += 0.98
                     else:                   # Particula fora da area
                         v.weight += 0.02
 
                 else:               # Robot real Fora da area
                     #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
-                    for j,k in enumerate(self.areas):
-                        if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
-                            sum += 1
+                    # for j,k in enumerate(self.areas):
+                    #     if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
+                    #         sum += 1
 
-                    if sum > 0:
+                    if self.map[int(10*v.y)][int(10*v.x)]==1:
                         v.weight += 0.02 
 
                     else:

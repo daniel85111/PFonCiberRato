@@ -8,6 +8,7 @@ import particleFilter
 import numpy as np
 import random
 import cv2
+import timeit
 
 CELLROWS=7
 CELLCOLS=14
@@ -45,7 +46,7 @@ class MyRob(CRobLinkAngs):
         # Lista de particulas
         self.mapmax_x = 28
         self.mapmax_y = 14
-        self.particulas = particleFilter.filtroParticulas(n_part=3000)
+        self.particulas = particleFilter.filtroParticulas(n_part=5000)
         #self.i = 0
         #self.inputfilter = []
         
@@ -72,6 +73,7 @@ class MyRob(CRobLinkAngs):
         stopped_state = 'run'
 
         while True:
+            start = timeit.default_timer()
             self.readSensors()
             if self.measures.gpsReady:
                 self.x = self.measures.x
@@ -134,10 +136,12 @@ class MyRob(CRobLinkAngs):
                 self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
             
             self.odometry_move(self.motors)                         # Movimento calculado por odometria
-            self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas               
+            self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas 
             self.particulas.w_calc(self.flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
             self.particulas.w_norm()                                # Normalizar peso de cada particula
+            stop3 = timeit.default_timer()              
             self.particulas.resample()                              # Resample de particulas
+            stop = timeit.default_timer()
             
             # Imagem Open CV
             self.particulas.clearImg()                              # Limpar imagem visualizada
@@ -145,6 +149,9 @@ class MyRob(CRobLinkAngs):
             self.particulas.drawReal(self.posx,self.posy,self.ori)  # Desenhar posição real do robot
             self.particulas.drawParticles()                         # Desenhar todas as particulas
             self.particulas.showImg()                               # Mostrar imagem
+            stop2 = timeit.default_timer()
+            
+            print(f'Elapsed time: {1000*(stop-start):.0f}ms\t Time for Image Show: {1000*(stop2-stop):.0f}\t Total: {1000*(stop2-start):.0f}\t Time resample(): {1000*(stop-stop3):.0f}')
 
                 
 
