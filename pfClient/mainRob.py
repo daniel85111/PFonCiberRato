@@ -46,7 +46,7 @@ class MyRob(CRobLinkAngs):
         # Lista de particulas
         self.mapmax_x = 28
         self.mapmax_y = 14
-        self.particulas = particleFilter.filtroParticulas(n_part=5000)
+        self.particulas = particleFilter.filtroParticulas(n_part=3000)
         #self.i = 0
         #self.inputfilter = []
         

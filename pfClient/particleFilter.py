@@ -111,8 +111,8 @@ class filtroParticulas():
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, 2*motors_noise*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, 2*motors_noise*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, 4*motors_noise*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, 4*motors_noise*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -138,10 +138,10 @@ class filtroParticulas():
     def resample(self):
         #print(f'sum(S_W**2) -> {self.sum_square_w}')
         #print(1./self.sum_square_w)
-        n = 0.95 * self.n_part
-        #if (1./self.sum_square_w < n):
+        n = 0.999 * self.n_part
+        if (1./self.sum_square_w < n):
         #if False:
-        if True:
+        #if True:
             #print("---------- ReSampling!!!!!- -----------")
             indices = []
             C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
@@ -182,7 +182,7 @@ class filtroParticulas():
                     #         sum += 1
 
                     # if sum > 0:
-                    if self.map[int(10*v.y)][int(10*v.x)]==1:
+                    if self.map[int(10*v.y-0.438*cos(radians(robot_compass)))][int(10*v.x-0.438*cos(radians(robot_compass)))]==1:
                         v.weight += 0.98
                     else:                   # Particula fora da area
                         v.weight += 0.02
@@ -193,7 +193,7 @@ class filtroParticulas():
                     #     if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
                     #         sum += 1
 
-                    if self.map[int(10*v.y)][int(10*v.x)]==1:
+                    if self.map[int(10*v.y-0.438*cos(radians(robot_compass)))][int(10*v.x+0.438*cos(radians(robot_compass)))]==1:
                         v.weight += 0.02 
 
                     else:
