@@ -134,15 +134,17 @@ class MyRob(CRobLinkAngs):
             if self.firstRun == 0:                          # Se já arrancou
                 self.posx = self.measures.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
                 self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
-            
-            self.odometry_move(self.motors)                         # Movimento calculado por odometria
-            self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas 
-            self.particulas.w_calc(self.flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
-            self.particulas.w_norm()                                # Normalizar peso de cada particula
-            stop3 = timeit.default_timer()              
-            self.particulas.resample()                              # Resample de particulas
-            stop = timeit.default_timer()
-            
+            stop = 0
+            stop3 = 0
+            if(state != "stop"):
+                self.odometry_move(self.motors)                         # Movimento calculado por odometria
+                self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas 
+                self.particulas.w_calc(self.flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
+                self.particulas.w_norm()                                # Normalizar peso de cada particula
+                stop3 = timeit.default_timer()              
+                self.particulas.resample()                              # Resample de particulas
+                stop = timeit.default_timer()
+                
             # Imagem Open CV
             self.particulas.clearImg()                              # Limpar imagem visualizada
             self.particulas.drawMap()                               # Desenhar mapa 
@@ -236,7 +238,6 @@ class MyRob(CRobLinkAngs):
         
         #print(self.motorsNoise)
 
-                
 
     def odometry_move(self, motors):
         

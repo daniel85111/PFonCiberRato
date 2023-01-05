@@ -1,5 +1,6 @@
 #import particles
 import numpy as np
+from matplotlib import pyplot as plt
 from math import *
 from lxml import etree
 import random
@@ -11,9 +12,11 @@ class particula():
         self.y = y
         self.ori = ori
         self.weight = w
+        self.sensor_center_posx = self.x + 0.438*cos(radians(ori))
+        self.sensor_center_posy = self.y - 0.438*sin(radians(ori))
 
 class filtroParticulas():
-    def __init__(self,n_part=2000, mapmax_x=28, mapmax_y=14):
+    def __init__(self,n_part=4000, mapmax_x=28, mapmax_y=14):
         self.n_part = n_part
         self.s_w = n_part
         self.max_w = 1
@@ -28,9 +31,8 @@ class filtroParticulas():
         self.map = self.getMap()
         print(self.map)
 
-        self.maxOfmax_w = 1
         for i in range (self.n_part):
-            self.particulas.append(particula(random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
+            self.particulas.append( particula( random.random() * (mapmax_x), random.random() * (mapmax_y), random.random()*360, 1))
 
             #self.particulas.append((random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
             #self.particulas.append((5, 8, 0))
@@ -85,7 +87,7 @@ class filtroParticulas():
         return areas
 
     def getMap(self):
-        line = []
+        arr = np.array([],dtype=bool)
         for l in range(10*self.mapmax_y):
             collum = []
             for c in range(10*self.mapmax_x):
@@ -95,24 +97,27 @@ class filtroParticulas():
                     if c >= 10*float(k[0][0]) and c+1 <= 10*float(k[1][0]) and l >= 10*float(k[0][1]) and l+1 <= 10*float(k[1][1]):
                         sum += 1
                         break
+
                 if sum != 0:
-                    collum.append(1)
+                    arr = np.concatenate((arr,[True]))
                 else:
-                    collum.append(0)
-            line.append(collum)
-        return line
+                    arr = np.concatenate((arr,[False]))
+
+            # line.append(collum)
+
+        return arr
 
 
     def odometry_move(self, motors, motors_noise):       
         self.motors = motors
-
-        for i,v in enumerate (self.particulas):
+        updatedmotors = False
+        for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, 4*motors_noise*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, 4*motors_noise*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, 3*motors_noise*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, 3*motors_noise*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -122,27 +127,31 @@ class filtroParticulas():
             
             # pos
             lin = (out_l + out_r) / 2
-            x = v.x + (lin * cos(radians(v.ori)))
-            y = v.y - (lin * sin(radians(v.ori)))
+            x = particula.x + (lin * cos(radians(particula.ori)))
+            y = particula.y - (lin * sin(radians(particula.ori)))
 
             rot = out_r - out_l # / self.robot_diameter ( = 1 )
-            ori = degrees(radians(v.ori) + rot) % 360
+            ori = degrees(radians(particula.ori) + rot) % 360
 
 
-            v.x = x
-            v.y = y
-            v.ori = ori
+            particula.x = x
+            particula.y = y
+            particula.ori = ori
+            particula.sensor_center_posx = x + 0.438*cos(radians(ori))
+            particula.sensor_center_posy = y - 0.438*sin(radians(ori))
             
-            self.last_motors = (out_l,out_r)
+            if not updatedmotors:
+                self.last_motors = (out_l,out_r)
+                updatedmotors = True
 
     def resample(self):
         #print(f'sum(S_W**2) -> {self.sum_square_w}')
         #print(1./self.sum_square_w)
-        n = 0.999 * self.n_part
+        n = self.n_part
         if (1./self.sum_square_w < n):
         #if False:
         #if True:
-            #print("---------- ReSampling!!!!!- -----------")
+            # print("---------- ReSampling!!!!!- -----------")
             indices = []
             C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
             u0, j = random.random(), 0
@@ -164,47 +173,46 @@ class filtroParticulas():
     def w_calc(self, flag_loc,robot_compass):
         self.max_w = 1
         if flag_loc == None : return
-        for i,v in enumerate(self.particulas):
-            if (v.x > self.mapmax_x-0.4 or v.x < 0+0.4 or v.y > self.mapmax_y-0.4 or v.y < 0+0.4):   # Está fora do mapa
+        
+        for i,particula in enumerate(self.particulas):
+            # Out of bounds test
+            if (particula.x > self.mapmax_x-0.5 or particula.x < 0.5 or particula.y > self.mapmax_y-0.5 or particula.y < 0.5):   # Está fora do mapa/bate na parede
+               
                 out_o_b = True
-                #v.weight += 0.02
+                particula.weight = 0.02
 
             else: # Está dentro do mapa
                 out_o_b = False
+           
+            # Se nao estiver out of bounds    
+            if not out_o_b:        # Estando dentro do mapa 
+                # Indice da posicao do sensor do centro (X,Y)
+                center_sensor_index = ( int(10*particula.sensor_center_posx), int(10*particula.sensor_center_posy) )
                 
-            if not out_o_b:        # Estando dentro do mapa
-                sum = 0  
-                if flag_loc == 1:       # Robot real Dentro da area
-                    #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):   # Particula dentro da area
-                    # for j,k in enumerate(self.areas):
-                    #     #if ( (v.x > k[0][0] and v.x < k[1][0] and v.y > k[0][1] and v.y < k[1][1]) ):
-                    #     if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
-                    #         sum += 1
+                # Indice no mapa = (Y-1)*mapLineSIZE + X-1
+                center_sensor_mapindex = (center_sensor_index[1]-1)*10*self.mapmax_x + center_sensor_index[0]
+                # print(f'center_sensor_index: {center_sensor_index} \n MapIndex: {center_sensor_mapindex}')
+                
+                # Robot real Dentro da area AZUL
+                if flag_loc == 1:
+                    # Comparar com o mapa e atribuir peso
+                    if self.map[center_sensor_mapindex]:
+                        particula.weight += 0.98
 
-                    # if sum > 0:
-                    if self.map[int(10*v.y-0.438*cos(radians(robot_compass)))][int(10*v.x-0.438*cos(radians(robot_compass)))]==1:
-                        v.weight += 0.98
-                    else:                   # Particula fora da area
-                        v.weight += 0.02
+                    else:                   
+                        particula.weight += 0.02
 
-                else:               # Robot real Fora da area
-                    #if ( (v.x < 20 and v.x>13.5 and v.y < 9.5 and v.y > 4) or (v.x > 4.5 and v.x < 10 and v.y < 9.5 and v.y > 4) ):     # Particula fora da area
-                    # for j,k in enumerate(self.areas):
-                    #     if ( (v.x > float(k[0][0])-0.438*cos(radians(robot_compass)) and v.x < float(k[1][0])-0.438*cos(radians(robot_compass))and v.y > float(k[0][1])+0.438*sin(radians(robot_compass)) and v.y < float(k[1][1])+0.438*sin(radians(robot_compass))) ):
-                    #         sum += 1
-
-                    if self.map[int(10*v.y-0.438*cos(radians(robot_compass)))][int(10*v.x+0.438*cos(radians(robot_compass)))]==1:
-                        v.weight += 0.02 
+                # Robot real Fora da area AZUL
+                else:               
+                    if self.map[center_sensor_mapindex]:
+                        particula.weight += 0.02 
 
                     else:
-                        v.weight += 0.98
-            if v.weight < 1:
-                v.weight = 0.5
+                        particula.weight += 0.98
 
-            if v.weight > self.max_w:
-                self.max_w = v.weight
-            if  self.max_w > self.maxOfmax_w:
-                self.maxOfmax_w = self.max_w
+
+            if particula.weight > self.max_w:
+                self.max_w = particula.weight
             
     def w_norm(self):
         s_w = 0
@@ -228,26 +236,44 @@ class filtroParticulas():
     def drawParticles(self):
         #print(self.max_w)
 
-        for i,v in enumerate(self.particulas):
-            x = int(40*v.x)
-            y = int(40*v.y)
-            ori = v.ori
+        for i,particula in enumerate(self.particulas):
+            x = int(40*particula.x)
+            y = int(40*particula.y)
+            ori = particula.ori
+            x_sensor_centro = int(40*particula.sensor_center_posx)
+            y_sensor_centro = int(40*particula.sensor_center_posy)
 
-            cv2.circle(self.img, (x,y), 5, (0,0.95*254+0.05*254*(self.norm_weights[i]/self.max_normalized_weight),0.05*254+0.95*254*(self.norm_weights[i]/self.max_normalized_weight)), -1)
-            cv2.line( self.img, (x,y), (x+int(10*cos(radians(ori))), y-int(10*sin(radians(ori)))), (255,0,0),2)
+
+            # cv2.circle(self.img, (x,y), 5, (0,0.95*254+0.05*254*(self.norm_weights[i]/self.max_normalized_weight),0.05*254+0.95*254*(self.norm_weights[i]/self.max_normalized_weight)), -1)
+            if particula.weight > 0.5:
+                cv2.circle(self.img, (x,y), 5, (0,200,0), -1)
+
+            else:
+                cv2.circle(self.img, (x,y), 2, (0,0,200), -1)
+
+            cv2.line( self.img, (x,y), (x_sensor_centro, y_sensor_centro), (200,150,100),2)
+            cv2.circle(self.img, (x_sensor_centro,y_sensor_centro), 1, (0,0,253), -1)
 
 
     def drawReal(self,x,y,ori):
         if x == None or y == None or ori == None : return
         cx = int(40*x)
-        cy = abs(int(40*(14-y)))
+        cy = int(abs(40*(14-y)))
+        x_sensor_centro = int(40*(x + 0.438*cos(radians(ori))))
+        y_sensor_centro = int(abs(40*(14 - y - 0.438*sin(radians(ori)))))
+
         
         cv2.circle(self.img,(cx,cy), 20, (150,150,0), -1) # Circulo centrado no centro do robot real
         cv2.line( self.img, (cx,cy), (cx+int(20*cos(radians(ori))), cy-int(20*sin(radians(ori)))), (255,0,0),2) # Linha do centro do robot direcionada segundo orientaçao
+        cv2.circle(self.img, (x_sensor_centro,y_sensor_centro), 1, (0,0,253), -1)
+
         #print(f'\nGPS: x: {40*x+40*cos(ori)}   y: {40*y+40*sin(ori)}   theta: {ori}')
 
     def drawMap(self):
-        
+        # See Only map
+        # b = self.map.reshape(10*self.mapmax_y, 10*self.mapmax_x)
+        # plt.imshow(b)
+        # plt.show()
 
         for j,k in enumerate(self.areas):
             cv2.rectangle(self.img,(int(40*k[0][0]),int(40*k[0][1])),(int(40*k[1][0]),int(40*k[1][1])),(255,0,0),-1) 
