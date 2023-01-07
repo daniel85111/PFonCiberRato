@@ -21,7 +21,8 @@ class MyRob(CRobLinkAngs):
         self.motors = (0.0,0.0)
         self.last_motors = (0.0,0.0)
 
-        self.flag_loc = None
+        # self.flag_loc = None
+        self.sens = None
 
         # Position
         self.firstRun = 1
@@ -132,14 +133,15 @@ class MyRob(CRobLinkAngs):
 
             # real pos
             if self.firstRun == 0:                          # Se já arrancou
-                self.posx = self.measures.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-                self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
+                self.posx = self.measures.x - self.initialx + 5          # Coordenada X em relação á posicao inicial + Offset
+                self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial + Offset
+            
             stop = 0
             stop3 = 0
             if(state != "stop"):
                 self.odometry_move(self.motors)                         # Movimento calculado por odometria
                 self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas 
-                self.particulas.w_calc(self.flag_loc,self.measures.compass)                        # Calcular pesos de cada particula
+                self.particulas.w_calc(self.sens)                        # Calcular pesos de cada particula
                 self.particulas.w_norm()                                # Normalizar peso de cada particula
                 stop3 = timeit.default_timer()              
                 self.particulas.resample()                              # Resample de particulas
@@ -148,7 +150,8 @@ class MyRob(CRobLinkAngs):
             # Imagem Open CV
             self.particulas.clearImg()                              # Limpar imagem visualizada
             self.particulas.drawMap()                               # Desenhar mapa 
-            self.particulas.drawReal(self.posx,self.posy,self.ori)  # Desenhar posição real do robot
+            #self.particulas.drawReal(self.posx,self.posy,self.ori)  # Desenhar posição real do robot
+            self.particulas.drawReal(5+self.x_od_pos,6+self.y_od_pos,self.ori)
             self.particulas.drawParticles()                         # Desenhar todas as particulas
             self.particulas.showImg()                               # Mostrar imagem
             stop2 = timeit.default_timer()
@@ -225,15 +228,15 @@ class MyRob(CRobLinkAngs):
                 self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
 
         
-        sens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
+        self.sens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
         #print(f'\n{sens}\n')
-        left_1,left_2,left_,center,right_3,right2,right_1 = sens
+        #left1,left2,left3,center,right3,right2,right1 = self.sens
 
 
-        if (center == 1):
-            self.flag_loc = 1
-        else:
-            self.flag_loc = 0
+        # if (center == 1):
+        #     self.flag_loc = 1
+        # else:
+        #     self.flag_loc = 0
 
         
         #print(self.motorsNoise)
@@ -257,7 +260,7 @@ class MyRob(CRobLinkAngs):
         # pos
         lin = (out_l + out_r) / 2
         x = self.x_od_pos + 2*(lin * cos(radians(self.ori)))
-        y = self.y_od_pos - 2*(lin * sin(radians(self.ori)))
+        y = self.y_od_pos + 2*(lin * sin(radians(self.ori)))
         
         rot = (out_r - out_l) / self.robot_diameter         # self.robot_diameter = 1 
         self.ori = degrees(radians(self.ori) + rot) % 360

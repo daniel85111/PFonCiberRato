@@ -31,27 +31,27 @@
 	<Wall Height="-2.00">
 		<Corner X="6.00" Y="0.00"/>
 		<Corner X="6.50" Y="0.00"/>
-		<Corner X="6.50" Y="14.00"/>
-		<Corner X="6.00" Y="14.00"/>
+		<Corner X="6.50" Y="4.00"/>
+		<Corner X="6.00" Y="4.00"/>
 	</Wall>
 
 	<Wall Height="-2.00">
 		<Corner X="6.80" Y="0.00"/>
 		<Corner X="7.00" Y="0.00"/>
-		<Corner X="7.00" Y="14.00"/>
-		<Corner X="6.80" Y="14.00"/>
+		<Corner X="7.00" Y="4.00"/>
+		<Corner X="6.80" Y="4.00"/>
 	</Wall>
 
 	<Wall Height="-2.00">
-		<Corner X="8.00" Y="0.00"/>
-		<Corner X="8.50" Y="0.00"/>
+		<Corner X="8.00" Y="7.00"/>
+		<Corner X="8.50" Y="7.00"/>
 		<Corner X="8.50" Y="14.00"/>
 		<Corner X="8.00" Y="14.00"/>
 	</Wall>
 
 	<Wall Height="-2.00">
-		<Corner X="9.00" Y="0.00"/>
-		<Corner X="9.50" Y="0.00"/>
+		<Corner X="9.00" Y="7.00"/>
+		<Corner X="9.50" Y="7.00"/>
 		<Corner X="9.50" Y="14.00"/>
 		<Corner X="9.00" Y="14.00"/>
 	</Wall>
@@ -59,8 +59,8 @@
 	<Wall Height="-2.00">
 		<Corner X="16.00" Y="0.00"/>
 		<Corner X="17.00" Y="0.00"/>
-		<Corner X="17.00" Y="7.00"/>
-		<Corner X="16.00" Y="7.00"/>
+		<Corner X="17.00" Y="6.00"/>
+		<Corner X="16.00" Y="6.00"/>
 	</Wall>
 
 	<Wall Height="-2.00">
@@ -114,6 +114,20 @@
 		<Corner X="11.50" Y="0.00"/>
 		<Corner X="11.50" Y="14.00"/>
 		<Corner X="10.50" Y="14.00"/>
+	</Wall>
+
+	<Wall Height="-2.00">
+		<Corner X="14.50" Y="7.00"/>
+		<Corner X="15.00" Y="7.00"/>
+		<Corner X="15.00" Y="14.00"/>
+		<Corner X="14.50" Y="14.00"/>
+	</Wall>
+
+	<Wall Height="-2.00">
+		<Corner X="18.50" Y="7.00"/>
+		<Corner X="20.00" Y="7.00"/>
+		<Corner X="20.00" Y="14.00"/>
+		<Corner X="18.50" Y="14.00"/>
 	</Wall>
 	
 
