@@ -16,15 +16,18 @@ CELLCOLS=14
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, angles, host):
         CRobLinkAngs.__init__(self, rob_name, rob_id, angles, host)
+        # Constants
         self.rob_name = rob_name
-        
+        self.robot_diameter = 1
+        self.mapmax_x = 28
+        self.mapmax_y = 14
+
+        # Movement(sensors, actuators)
         self.motors = (0.0,0.0)
         self.last_motors = (0.0,0.0)
-
-        # self.flag_loc = None
         self.sens = None
 
-        # Position
+        # Pos
         self.firstRun = 1
         self.initialx = None
         self.initialy = None
@@ -35,28 +38,9 @@ class MyRob(CRobLinkAngs):
         self.x_od_pos = 0
         self.y_od_pos = 0
         self.ori= 0
-        self.robot_diameter = 1
-        self.border = None
 
-        self.x_posmin = 0
-        self.y_posmin = 0
-        self.x_posmax = 0
-        self.y_posmax = 0
-
-
-        # Lista de particulas
-        self.mapmax_x = 28
-        self.mapmax_y = 14
+        # Particle filter
         self.particulas = particleFilter.filtroParticulas(n_part=3000)
-        #self.i = 0
-        #self.inputfilter = []
-        
-        
-        
-        # Tamanho imagem = 28 x 14 -> 1120 x 560 = simulação*40         x40  
-        self.immax_x = 1120
-        self.immax_y = 560
-        self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8)
 
     def setMap(self, labMap):
         self.labMap = labMap
@@ -123,40 +107,40 @@ class MyRob(CRobLinkAngs):
             if self.firstRun:                               # Primeiro movimento
                 if self.x is not None:
                     self.initialx = self.x                              # Receber coordenada X do GPS
-                    #print(self.initialx )
                 if self.y is not None:
                     self.initialy = self.y                              # Receber coordenada Y do GPS
-                    #print(self.initialy )
 
                 if self.y is not None and self.x is not None:
-                    self.firstRun = 0                                   # Já deu o arranque
+                    self.firstRun = 0                                   # Já tem as coordenadas iniciais
 
-            # real pos
-            if self.firstRun == 0:                          # Se já arrancou
+            
+            # Se já tem as coordenadas iniciais
+            if self.firstRun == 0:                         
                 self.posx = self.measures.x - self.initialx + 5          # Coordenada X em relação á posicao inicial + Offset
                 self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial + Offset
             
-            stop = 0
-            stop3 = 0
-            if(state != "stop"):
-                self.odometry_move(self.motors)                         # Movimento calculado por odometria
-                self.particulas.odometry_move(self.motors, self.motorsNoise)              # Mover particulas 
-                self.particulas.w_calc(self.sens)                        # Calcular pesos de cada particula
-                self.particulas.w_norm()                                # Normalizar peso de cada particula
-                stop3 = timeit.default_timer()              
-                self.particulas.resample()                              # Resample de particulas
-                stop = timeit.default_timer()
-                
-            # Imagem Open CV
-            self.particulas.clearImg()                              # Limpar imagem visualizada
-            self.particulas.drawMap()                               # Desenhar mapa 
-            #self.particulas.drawReal(self.posx,self.posy,self.ori)  # Desenhar posição real do robot
-            self.particulas.drawReal(5+self.x_od_pos,6+self.y_od_pos,self.ori)
-            self.particulas.drawParticles()                         # Desenhar todas as particulas
-            self.particulas.showImg()                               # Mostrar imagem
-            stop2 = timeit.default_timer()
-            
-            print(f'Elapsed time: {1000*(stop-start):.0f}ms\t Time for Image Show: {1000*(stop2-stop):.0f}\t Total: {1000*(stop2-start):.0f}\t Time resample(): {1000*(stop-stop3):.0f}')
+            self.odometry_move_robot(self.motors)                                 # Movimento do robot calculado por odometria
+            self.update_particle_filter(state)                                    # Atualizar filtro de particulas
+
+
+
+    def update_particle_filter(self, state):
+        if(state != "stop"):
+            self.particulas.odometry_move_particles(self.motors, self.motorsNoise)    # Mover particulas 
+            self.particulas.weights_calculation(self.sens)                            # Calcular pesos de cada particula
+            self.particulas.weights_normalization()                                   # Normalizar peso de cada particula
+            #stop3 = timeit.default_timer()              
+            self.particulas.resample()                                                # Resample de particulas
+            #stop = timeit.default_timer()
+
+        # Show Particles (real_posx, real_posy), and show the real position of robot (Uncomment next line to activate)        
+        # self.particulas.showParticles(self.posx, self.posy, self.ori, self.ori, self.robot_diameter)                     
+        
+        # Show Particles (real_posx, real_posy), and show the position of robot calculated by odometry (Uncomment next line to activate)
+        self.particulas.showParticles(self.x_od_pos+5, self.y_od_pos+6, self.ori, self.robot_diameter)           
+        
+        # print(f'Elapsed time: {1000*(stop-start):.0f}ms\t Time for Image Show: {1000*(stop2-stop):.0f}\t Total: {1000*(stop2-start):.0f}\t Time resample(): {1000*(stop-stop3):.0f}')
+
 
                 
 
@@ -178,10 +162,6 @@ class MyRob(CRobLinkAngs):
             rpow = +0.1
             self.motors = (lpow, rpow) 
             self.driveMotors(lpow,rpow)
-            # if self.firstRun == 0:                          # Se já arrancou
-            #     self.posx = self.measures.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-            #     self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
-
 
         elif self.measures.irSensor[left_id]> 2.7:
             #print('Rotate slowly right')
@@ -190,10 +170,6 @@ class MyRob(CRobLinkAngs):
             rpow = 0.0
             self.motors = (lpow, rpow)
             self.driveMotors(lpow,rpow)
-            # if self.firstRun == 0:                          # Se já arrancou
-            #     self.posx = self.measures.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-            #     self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
-
 
         elif self.measures.irSensor[right_id]> 2.7:
             #print('Rotate slowly left')
@@ -202,11 +178,6 @@ class MyRob(CRobLinkAngs):
             rpow = 0.1
             self.motors = (lpow, rpow)
             self.driveMotors(lpow,rpow)
-            # if self.firstRun == 0:                          # Se já arrancou
-            #     self.posx = self.measures.x - self.initialx + 5                  # Coordenada X em relação á posicao inicial
-            #     self.posy = self.measures.y - self.initialy + 6          # Coordenada Y em relação à posição inicial 
-
-            
 
         else:
             #$print('Go')
@@ -216,12 +187,8 @@ class MyRob(CRobLinkAngs):
                 self.motors = (lpow, rpow)
                 self.driveMotors(self.motors)
 
-
             else:
-                
-
                 #print(f'Xg: {self.posx:.2f}    Yg: {self.posy:.2f}    thetag: {self.ori}')
-
                 lpow = 0.1
                 rpow = 0.1
                 self.motors = (lpow, rpow) 
@@ -229,20 +196,9 @@ class MyRob(CRobLinkAngs):
 
         
         self.sens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
-        #print(f'\n{sens}\n')
-        #left1,left2,left3,center,right3,right2,right1 = self.sens
 
 
-        # if (center == 1):
-        #     self.flag_loc = 1
-        # else:
-        #     self.flag_loc = 0
-
-        
-        #print(self.motorsNoise)
-
-
-    def odometry_move(self, motors):
+    def odometry_move_robot(self, motors):
         
         self.motors = motors        
 
