@@ -46,9 +46,6 @@ class particula():
         self.sensor_R3_posx = self.sensor_center_posx + 1*0.08*cos(radians(ori-90))
         self.sensor_R3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori+90))
 
-        
-
-
 class filtroParticulas():
     def __init__(self,n_part=4000, mapmax_x=28, mapmax_y=14):
         self.n_part = n_part
@@ -60,13 +57,12 @@ class filtroParticulas():
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
         self.norm_weights = []
-        self.max_normalized_weight = 1/self.n_part # Para já não é utilizado 
         self.areas = self.getAreas()
         
-        self.map, self.map_scale_factor = self.getMap()
+        self.map, self.map_cropped, self.map_scale_factor = self.getMap()
 
-        self.distance_map = self.getDistanceMap()
-        np.savetxt('Dist MAP', self.distance_map, fmt='%2.1f', delimiter=', ')
+        self.distance_map_cropped, self.distance_map_full = self.getDistanceMap()
+        np.savetxt('Dist MAP', self.distance_map_cropped, fmt='%2.1f', delimiter=', ')
 
         #print(self.map)
 
@@ -86,12 +82,6 @@ class filtroParticulas():
             #self.ori.append(self.particulas[i][-1])
             #self.ori.append(0)
 
-        # Tamanho imagem = 28 x 14 -> 1120 x 560 = simulação*40         x40 
-        self.imscale = 4*self.map_scale_factor
-        self.immax_x = self.imscale * self.mapmax_x
-        self.immax_y = self.imscale * self.mapmax_y
-        self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8)
-
         self.biewer = viewercv.ViewParticles(self.mapmax_x, self.mapmax_y, self.particulas, self.areas)
 
     def parseXML(self,xmlFile):
@@ -109,6 +99,7 @@ class filtroParticulas():
                     #print(elem.tag=="Corner")
                     if(elem.tag=="Corner"):
                         dic.append(elem.attrib)
+        #print(dic)
         return dic
 
     def getAreas(self):
@@ -129,48 +120,82 @@ class filtroParticulas():
             if float(v['Y']) > maxy: maxy = float(v['Y'])
             
             if i == len(array)-1:
-                areas.append([[minx,14-maxy],[maxx,14-miny]])
+                areas.append([[minx,14-maxy],[maxx,14-miny]]) 
                 #print(areas)
-        return areas
+        #print(areas[1][1])
+        return areas    # ([minx,miny], [maxx,maxy])
 
     def getMap(self):
-        arr = np.array([],dtype=np.uint8)
-        scale = 10
+        scale = 100
 
-        for l in range(scale*self.mapmax_y):
-            # collum = []
-            for c in range(scale*self.mapmax_x):
-                sum = 0
-                for j,k in enumerate(self.areas):
+        mapstartx = scale*self.mapmax_x
+        mapstarty = scale*self.mapmax_y
+        mapendx = 2*scale*self.mapmax_x
+        mapendy = 2*scale*self.mapmax_y
 
-                    if c >= scale*float(k[0][0]) and c+1 <= scale*float(k[1][0]) and l >= scale*float(k[0][1]) and l+1 <= scale*float(k[1][1]):
-                        sum += 1
-                        break
+        topleft = (mapstartx,mapstarty)
+        topright = (mapendx,mapstarty)
+        bottomright = (mapendx, mapendy)
+        bottomleft = (mapstartx, mapendy)
 
-                if sum != 0:
-                    arr = np.concatenate((arr,[255]))
-                else:
-                    arr = np.concatenate((arr,[0]))
+        arr = np.zeros((3*mapstarty,3*mapstartx,1), np.uint8)
 
-            # line.append(collum)
+        cv2.line(arr, (topleft), (topright),255,1)
+        cv2.line(arr, (topright), (bottomright),255,1)
+        cv2.line(arr, (bottomright), (bottomleft),255,1)       
+        cv2.line(arr, (bottomleft), (topleft),255,1)
+        
+        for i,v in enumerate(self.areas): # v[0][0] = xmin v[0][1] = ymin
+            # print(f'i = {i}\t v= {v}')
+            xmin = int(scale*v[0][0])
+            ymin = int(scale*v[0][1])
+            xmax = int(scale*v[1][0])
+            ymax = int(scale*v[1][1])
+            # print(f' xmin= {xmin}\t ymin= {ymin}\t xmax= {xmax}\t ymax= {ymax}\t')
+            area_topleft     =  (mapstartx+xmin, mapstarty+ymin)
+            area_topright    =  (mapstartx+xmax, mapstarty+ymin)
+            area_bottomright =  (mapstartx+xmax, mapstarty+ymax)
+            area_bottomleft  =  (mapstartx+xmin, mapstarty+ymax)
 
-        return arr,scale
+            cv2.line(arr, (area_topleft), (area_topright), 255,1)
+            cv2.line(arr, (area_topright), (area_bottomright), 255,1)
+            cv2.line(arr, (area_bottomright), (area_bottomleft), 255,1)
+            cv2.line(arr, (area_bottomleft), (area_topleft), 255,1)
+
+        # cv2.imshow("Resized image", arr)
+        # cv2.waitKey(0)  
+        # plt.imshow(arr)
+        # plt.show() 
+       
+        cropped = arr[mapstarty:mapendy+1, mapstartx:mapendx+1]
+        # cv2.imshow("Resized image", cropped)
+        # cv2.waitKey(0) ^
+        # plt.imshow(cropped)
+        # plt.show() 
+        return arr,cropped,scale
 
     def getDistanceMap(self):
-        b = self.map.reshape(self.map_scale_factor*self.mapmax_y, self.map_scale_factor*self.mapmax_x)
-        b = cv2.bitwise_not(b)
-        b = b.astype(np.uint8)
+        cropped = self.map_cropped
+        cropped = cv2.bitwise_not(cropped)
+        cropped = cropped.astype(np.uint8)
+
+        full = self.map
+        full = cv2.bitwise_not(full)
+        full = full.astype(np.uint8)
         
 
-        dist = cv2.distanceTransform(b, cv2.DIST_L2, 5)
-        # print(dist)
-        # plt.imshow(dist)
+        distmap_cropped = cv2.distanceTransform(cropped, cv2.DIST_L2, 5)
+        distmap_full = cv2.distanceTransform(full, cv2.DIST_L2, 5)
+
+        # plt.imshow(distmap_cropped)
         # plt.show()
-        return dist
+        # plt.imshow(distmap_full)
+        # plt.show() 
+        return distmap_cropped, distmap_full
 
     def odometry_move_particles(self, motors, motors_noise):       
         self.motors = motors
-        noite_multiplier = 3
+        noite_multiplier = 2
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -236,10 +261,10 @@ class filtroParticulas():
 
 
     def resample(self):
-        n = 0.99*self.n_part
+        n = 0.9*self.n_part
         #print(f'Resample condition: {1./self.sum_squarednormalized_weights:.2f} < {n:.2f} -----> {1./self.sum_squarednormalized_weights < n}')
-        if (1./self.sum_squarednormalized_weights < n):
-        # if True:
+        # if (1./self.sum_squarednormalized_weights < n):
+        if True:
             # print("---------- ReSampling!!!!!- -----------")
             indices = []
             C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
@@ -269,40 +294,31 @@ class filtroParticulas():
         
 
         
-        for i,particula in enumerate(self.particulas):
-            # Out of bounds test
-            if (particula.x > self.mapmax_x-0.5 or particula.x < 0.5 or particula.y > self.mapmax_y-0.5 or particula.y < 0.5):   # Está fora do mapa/bate na parede
-               
-                out_o_b = True
-                # particula.weight = smaller_weightvalue
+        for i,particula in enumerate(self.particulas):   
+            sensorDIST_center_index =( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_center_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_center_posy) )
+            sensorDIST_left_index = ( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_left_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_left_posy) )
+            sensorDIST_right_index = ( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_right_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_right_posy) )
+            sensorDIST_back_index = ( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_back_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_back_posy) )
 
-            else: # Está dentro do mapa
-                out_o_b = False
-           
-            # Se nao estiver out of bounds    
-            if not out_o_b:        # Estando dentro do mapa 
-                # Indice da posicao do sensor do centro (X,Y) no mapa com fator de escala (arredondamento para inteiro, coordenadas)
-                
-                sensorDIST_center_index =( int(self.map_scale_factor*particula.sensorDIST_center_posx), int(self.map_scale_factor*particula.sensorDIST_center_posy) )
-                sensorDIST_left_index = ( int(self.map_scale_factor*particula.sensorDIST_left_posx), int(self.map_scale_factor*particula.sensorDIST_left_posy) )
-                sensorDIST_right_index = ( int(self.map_scale_factor*particula.sensorDIST_right_posx), int(self.map_scale_factor*particula.sensorDIST_right_posy) )
-                sensorDIST_back_index = ( int(self.map_scale_factor*particula.sensorDIST_back_posx), int(self.map_scale_factor*particula.sensorDIST_back_posy) )
+            # Distance map, each cell (index value) represents 0.1 radius, so (dist value * 10)
+            particle_centerDIST = self.distance_map_full[sensorDIST_center_index[1],sensorDIST_center_index[0]]
+            particle_leftDIST = self.distance_map_full[sensorDIST_left_index[1],sensorDIST_left_index[0]]
+            particle_rightDIST = self.distance_map_full[sensorDIST_right_index[1],sensorDIST_right_index[0]]
+            particle_backDIST = self.distance_map_full[sensorDIST_back_index[1],sensorDIST_back_index[0]]
 
-                # Distance map, each cell (index value) represents 0.1 radius, so (dist value * 10)
-                particle_centerDIST = self.distance_map[sensorDIST_center_index[1],sensorDIST_center_index[0]]
-                particle_leftDIST = self.distance_map[sensorDIST_left_index[1],sensorDIST_left_index[0]]
-                particle_rightDIST = self.distance_map[sensorDIST_right_index[1],sensorDIST_right_index[0]]
-                particle_backDIST = self.distance_map[sensorDIST_back_index[1],sensorDIST_back_index[0]]
+            centerDIFF = (particle_centerDIST/self.map_scale_factor - centerDIST)**2
+            leftDIFF = (particle_leftDIST/self.map_scale_factor - leftDIST)**2
+            rightDIFF = (particle_rightDIST/self.map_scale_factor - rightDIST)**2
+            backDIFF = (particle_backDIST/self.map_scale_factor - backDIST)**2
+            
+            
+            # particula.weight +=  exp(-centerDIFF/sigma)
+            particula.weight +=  ( exp(-centerDIFF) + exp(-leftDIFF) + exp(-rightDIFF) + exp(-backDIFF))
 
-                centerDIFF = abs(particle_centerDIST/10 - centerDIST)
-                leftDIFF = abs(particle_leftDIST/10 - leftDIST)
-                rightDIFF = abs(particle_rightDIST/10 - rightDIST)
-                backDIFF = abs(particle_backDIST/10 - backDIST)
+            # minDIFF = min(centerDIFF,leftDIFF,rightDIFF,backDIFF)
+            # particula.weight += exp(-minDIFF)
 
-                particula.weight +=  exp(-centerDIFF)
-                # particula.weight +=  ( 0.25 * exp(-centerDIFF) + 0.25 * exp(-leftDIFF) + 0.25 * exp(-rightDIFF) + 0.25 * exp(-backDIFF))
-
-                # print(particula.weight)
+            # print(particula.weight)
                 
 
     # Normalize the weights      
@@ -320,9 +336,6 @@ class filtroParticulas():
         for i,v in enumerate(self.particulas): 
             normalized_weight = v.weight/self.sum_weights
             self.norm_weights[i] = normalized_weight
-
-            if normalized_weight > self.max_normalized_weight:
-                self.max_normalized_weight = normalized_weight # Para já não é utilizado 
 
             sum_squarednormalized_weights += self.norm_weights[i]**2      # sum(norm_weight[i]^2)
 

@@ -162,7 +162,7 @@ class MyRob(CRobLinkAngs):
             self.motors = (lpow, rpow) 
             self.driveMotors(lpow,rpow)
 
-        elif self.measures.irSensor[left_id]> 2:
+        elif self.measures.irSensor[left_id]> 1.5:
             #print('Rotate slowly right')
             #self.driveMotors(0.1,0.0)
             lpow = 0.1
@@ -170,7 +170,7 @@ class MyRob(CRobLinkAngs):
             self.motors = (lpow, rpow)
             self.driveMotors(lpow,rpow)
 
-        elif self.measures.irSensor[right_id]> 2:
+        elif self.measures.irSensor[right_id]> 1.5:
             #print('Rotate slowly left')
             #self.driveMotors(0.0,0.1)
             lpow = 0.0
