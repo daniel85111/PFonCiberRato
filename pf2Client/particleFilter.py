@@ -16,8 +16,11 @@ class particula():
         self.weight = w
         
         # Sensores de distnacia
-        self.sensorDIST_center_posx = self.x + 0.5*cos(radians(ori))
-        self.sensorDIST_center_posy = self.y - 0.5*sin(radians(ori))
+        self.sensorDIST_apparture = 30
+
+        self.sensorDIST_center_ori = 0
+        self.sensorDIST_center_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_center_ori))
+        self.sensorDIST_center_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_center_ori))
         self.sensorDIST_center_endpointleft_x = None
         self.sensorDIST_center_endpointleft_y = None
         self.sensorDIST_center_endpointcenter_x = None
@@ -25,9 +28,9 @@ class particula():
         self.sensorDIST_center_endpointright_x = None
         self.sensorDIST_center_endpointright_y = None
 
-        
-        self.sensorDIST_left_posx = self.x + 0.5*cos(radians(ori+60))
-        self.sensorDIST_left_posy = self.y - 0.5*sin(radians(ori+60))
+        self.sensorDIST_left_ori = 60
+        self.sensorDIST_left_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_left_ori))
+        self.sensorDIST_left_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_left_ori))
         self.sensorDIST_left_endpointleft_x = None
         self.sensorDIST_left_endpointleft_y = None
         self.sensorDIST_left_endpointcenter_x = None
@@ -35,8 +38,9 @@ class particula():
         self.sensorDIST_left_endpointright_x = None
         self.sensorDIST_left_endpointright_y = None
 
-        self.sensorDIST_right_posx = self.x + 0.5*cos(radians(ori-60))
-        self.sensorDIST_right_posy = self.y - 0.5*sin(radians(ori-60))
+        self.sensorDIST_right_ori = -60
+        self.sensorDIST_right_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_right_ori))
+        self.sensorDIST_right_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_right_ori))
         self.sensorDIST_right_endpointleft_x = None
         self.sensorDIST_right_endpointleft_y = None
         self.sensorDIST_right_endpointcenter_x = None
@@ -44,8 +48,9 @@ class particula():
         self.sensorDIST_right_endpointright_x = None
         self.sensorDIST_right_endpointright_y = None
 
-        self.sensorDIST_back_posx = self.x + 0.5*cos(radians(ori+180))
-        self.sensorDIST_back_posy = self.y - 0.5*sin(radians(ori+180))
+        self.sensorDIST_back_ori = 180
+        self.sensorDIST_back_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_back_ori))
+        self.sensorDIST_back_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_back_ori))
         self.sensorDIST_back_endpointleft_x = None
         self.sensorDIST_back_endpointleft_y = None
         self.sensorDIST_back_endpointcenter_x = None
@@ -57,23 +62,23 @@ class particula():
         self.sensor_center_posx = self.x + 0.438*cos(radians(ori))
         self.sensor_center_posy = self.y - 0.438*sin(radians(ori))
 
-        self.sensor_L1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori+90))
-        self.sensor_L1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori-90))
+        # self.sensor_L1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori+90))
+        # self.sensor_L1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori-90))
 
-        self.sensor_L2_posx = self.sensor_center_posx + 2*0.08*cos(radians(ori+90))
-        self.sensor_L2_posy = self.sensor_center_posy + 2*0.08*sin(radians(ori-90))
+        # self.sensor_L2_posx = self.sensor_center_posx + 2*0.08*cos(radians(ori+90))
+        # self.sensor_L2_posy = self.sensor_center_posy + 2*0.08*sin(radians(ori-90))
 
-        self.sensor_L3_posx = self.sensor_center_posx + 1*0.08*cos(radians(ori+90))
-        self.sensor_L3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori-90))
+        # self.sensor_L3_posx = self.sensor_center_posx + 1*0.08*cos(radians(ori+90))
+        # self.sensor_L3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori-90))
 
-        self.sensor_R1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori-90))
-        self.sensor_R1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori+90))
+        # self.sensor_R1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori-90))
+        # self.sensor_R1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori+90))
 
-        self.sensor_R2_posx = self.sensor_center_posx + 2*0.08*cos(radians(ori-90))
-        self.sensor_R2_posy = self.sensor_center_posy + 2*0.08*sin(radians(ori+90))
+        # self.sensor_R2_posx = self.sensor_center_posx + 2*0.08*cos(radians(ori-90))
+        # self.sensor_R2_posy = self.sensor_center_posy + 2*0.08*sin(radians(ori+90))
 
-        self.sensor_R3_posx = self.sensor_center_posx + 1*0.08*cos(radians(ori-90))
-        self.sensor_R3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori+90))
+        # self.sensor_R3_posx = self.sensor_center_posx + 1*0.08*cos(radians(ori-90))
+        # self.sensor_R3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori+90))
 
 class filtroParticulas():
     def __init__(self,n_part=4000, mapmax_x=28, mapmax_y=14):
@@ -97,10 +102,10 @@ class filtroParticulas():
 
         for i in range (self.n_part):
             # Orientacao random
-            # self.particulas.append( particula( random.random() * (mapmax_x), random.random() * (mapmax_y), random.random()*360, 1))
+            self.particulas.append( particula( random.random() * (mapmax_x), random.random() * (mapmax_y), random.random()*360, 1))
 
             # Orientacao 0
-            self.particulas.append( particula( random.random() * (mapmax_x), random.random() * (mapmax_y), 0, 1))
+            # self.particulas.append( particula( random.random() * (mapmax_x), random.random() * (mapmax_y), 0, 1))
 
 
             #self.particulas.append((random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
@@ -115,7 +120,7 @@ class filtroParticulas():
 
     def odometry_move_particles(self, motors, motors_noise):       
         self.motors = motors
-        noite_multiplier = 2
+        noite_multiplier = 5
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -147,34 +152,34 @@ class filtroParticulas():
             particula.sensor_center_posy = y - 0.438*sin(radians(ori))
 
             particula.sensorDIST_center_posx = particula.x + 0.5*cos(radians(ori))
-            particula.sensorDIST_center_posy = particula.y - 0.5*sin(radians(ori))
+            particula.sensorDIST_center_posy = particula.y + 0.5*sin(radians(ori))
 
             particula.sensorDIST_left_posx = particula.x + 0.5*cos(radians(ori-60))
-            particula.sensorDIST_left_posy = particula.y - 0.5*sin(radians(ori-60))
+            particula.sensorDIST_left_posy = particula.y + 0.5*sin(radians(ori-60))
 
             particula.sensorDIST_right_posx = particula.x + 0.5*cos(radians(ori+60))
-            particula.sensorDIST_right_posy = particula.y - 0.5*sin(radians(ori+60))
+            particula.sensorDIST_right_posy = particula.y + 0.5*sin(radians(ori+60))
 
             particula.sensorDIST_back_posx = particula.x + 0.5*cos(radians(ori+180))
-            particula.sensorDIST_back_posy = particula.y - 0.5*sin(radians(ori+180))
+            particula.sensorDIST_back_posy = particula.y + 0.5*sin(radians(ori+180))
 
-            particula.sensor_L1_posx = particula.sensor_center_posx + 3*0.08*cos(radians(ori+90))
-            particula.sensor_L1_posy = particula.sensor_center_posy + 3*0.08*sin(radians(ori-90))
+            # particula.sensor_L1_posx = particula.sensor_center_posx + 3*0.08*cos(radians(ori+90))
+            # particula.sensor_L1_posy = particula.sensor_center_posy + 3*0.08*sin(radians(ori-90))
 
-            particula.sensor_L2_posx = particula.sensor_center_posx + 2*0.08*cos(radians(ori+90))
-            particula.sensor_L2_posy = particula.sensor_center_posy + 2*0.08*sin(radians(ori-90))
+            # particula.sensor_L2_posx = particula.sensor_center_posx + 2*0.08*cos(radians(ori+90))
+            # particula.sensor_L2_posy = particula.sensor_center_posy + 2*0.08*sin(radians(ori-90))
 
-            particula.sensor_L3_posx = particula.sensor_center_posx + 1*0.08*cos(radians(ori+90))
-            particula.sensor_L3_posy = particula.sensor_center_posy + 1*0.08*sin(radians(ori-90))
+            # particula.sensor_L3_posx = particula.sensor_center_posx + 1*0.08*cos(radians(ori+90))
+            # particula.sensor_L3_posy = particula.sensor_center_posy + 1*0.08*sin(radians(ori-90))
 
-            particula.sensor_R1_posx = particula.sensor_center_posx + 3*0.08*cos(radians(ori-90))
-            particula.sensor_R1_posy = particula.sensor_center_posy + 3*0.08*sin(radians(ori+90))
+            # particula.sensor_R1_posx = particula.sensor_center_posx + 3*0.08*cos(radians(ori-90))
+            # particula.sensor_R1_posy = particula.sensor_center_posy + 3*0.08*sin(radians(ori+90))
 
-            particula.sensor_R2_posx = particula.sensor_center_posx + 2*0.08*cos(radians(ori-90))
-            particula.sensor_R2_posy = particula.sensor_center_posy + 2*0.08*sin(radians(ori+90))
+            # particula.sensor_R2_posx = particula.sensor_center_posx + 2*0.08*cos(radians(ori-90))
+            # particula.sensor_R2_posy = particula.sensor_center_posy + 2*0.08*sin(radians(ori+90))
 
-            particula.sensor_R3_posx = particula.sensor_center_posx + 1*0.08*cos(radians(ori-90))
-            particula.sensor_R3_posy = particula.sensor_center_posy + 1*0.08*sin(radians(ori+90))
+            # particula.sensor_R3_posx = particula.sensor_center_posx + 1*0.08*cos(radians(ori-90))
+            # particula.sensor_R3_posy = particula.sensor_center_posy + 1*0.08*sin(radians(ori+90))
             
 
             self.last_motors = (out_l,out_r)
@@ -203,6 +208,39 @@ class filtroParticulas():
                 newParticles[i].weight = 1
           
             self.particulas = newParticles
+    
+    # Para o segundo metodo de calculo dos pesos
+    def calculateDistanceEndpoints(self,centerDIST, leftDIST, rightDIST, backDIST):
+        for i,particula in enumerate(self.particulas):  
+            particula.sensorDIST_center_endpointleft_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_center_endpointleft_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_center_endpointcenter_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori))
+            particula.sensorDIST_center_endpointcenter_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori))
+            particula.sensorDIST_center_endpointright_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture))
+            particula.sensorDIST_center_endpointright_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture))
+
+            particula.sensorDIST_left_endpointleft_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_left_endpointleft_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_left_endpointcenter_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori))
+            particula.sensorDIST_left_endpointcenter_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori))
+            particula.sensorDIST_left_endpointright_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture))
+            particula.sensorDIST_left_endpointright_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture))
+
+            particula.sensorDIST_right_endpointleft_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_right_endpointleft_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_right_endpointcenter_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori))
+            particula.sensorDIST_right_endpointcenter_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori))
+            particula.sensorDIST_right_endpointright_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture))
+            particula.sensorDIST_right_endpointright_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture))
+
+            particula.sensorDIST_back_endpointleft_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_back_endpointleft_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture))
+            particula.sensorDIST_back_endpointcenter_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori))
+            particula.sensorDIST_back_endpointcenter_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori))
+            particula.sensorDIST_back_endpointright_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture))
+            particula.sensorDIST_back_endpointright_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture))
+
+
 
     def weights_calculation(self, LINEsens, DISTsens):
         left1,left2,left3,center,right3,right2,right1 = LINEsens
@@ -211,9 +249,8 @@ class filtroParticulas():
        
         if LINEsens == None : return
         if DISTsens == None : return
-        
-
-        
+        self.calculateDistanceEndpoints(centerDIST, leftDIST, rightDIST, backDIST)
+        # Ainda nao fiz nada aqui para o segundo metodo do calculo dos pesos    
         for i,particula in enumerate(self.particulas):   
             sensorDIST_center_index =( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_center_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_center_posy) )
             sensorDIST_left_index = ( int(self.map_scale_factor*self.mapmax_x+self.map_scale_factor*particula.sensorDIST_left_posx), int(self.map_scale_factor*self.mapmax_y+self.map_scale_factor*particula.sensorDIST_left_posy) )
@@ -226,7 +263,7 @@ class filtroParticulas():
             particle_rightDIST = self.distance_map_full[sensorDIST_right_index[1],sensorDIST_right_index[0]]
             particle_backDIST = self.distance_map_full[sensorDIST_back_index[1],sensorDIST_back_index[0]]
 
-            # TIrar divisao daqui e passar para a criação do mapa
+
             centerDIFF = (particle_centerDIST - centerDIST)**2
             leftDIFF = (particle_leftDIST - leftDIST)**2
             rightDIFF = (particle_rightDIST - rightDIST)**2
@@ -264,10 +301,10 @@ class filtroParticulas():
         self.sum_squarednormalized_weights = sum_squarednormalized_weights
 
     # Use the viewer functions of viewercv to show particles in the cv window
-    def showParticles(self,real_posx,real_posy,ori, diameter):
+    def showParticles(self,real_posx,real_posy,ori, diameter, DISTsens):
         self.visualizer.clearImg()
         self.visualizer.drawMap(self.map)
         self.visualizer.updateParticles(self.particulas)
         self.visualizer.drawParticles()
-        self.visualizer.drawReal(real_posx,real_posy,ori, diameter)
+        self.visualizer.drawReal(real_posx,real_posy,ori, diameter, DISTsens)
         self.visualizer.showImg()

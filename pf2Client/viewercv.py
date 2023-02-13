@@ -71,55 +71,128 @@ class ViewParticles():
 
 
 
-    def drawReal(self,x,y,ori, diameter):
+    def drawReal(self,x,y,ori, diameter, DISTsens):
         # Constants and calculation of positions in the cv window
         y_correction = int(14)*self.imscale     # In OpenCV the (0,0) is top-left but from the simulator is bottom-left
         radious = 0.5*diameter                  # Robot real radious
         
         if x == None or y == None or ori == None : return
-        
+        if DISTsens == None : DISTsens = (0,0,0,0)
+
+        sensorDIST_apparture = 30
+        centerDIST, leftDIST, rightDIST, backDIST = DISTsens
+        sensorDIST_center_ori = 0
+        sensorDIST_left_ori  = 60
+        sensorDIST_right_ori = -60
+        sensorDIST_back_ori = 180
+
+
         cx = self.imscale*(x+self.xinit_real[0])                     # Center of robot
         cy = abs(y_correction - self.imscale*(y+self.yinit_real[0]))
 
         # Line Sensors location
-        x_sensor_centro = cx + self.imscale*0.438*cos(radians(ori))
-        y_sensor_centro = abs(cy - self.imscale*0.438*sin(radians(ori)))
+        # x_sensor_centro = cx + self.imscale*0.438*cos(radians(ori))
+        # y_sensor_centro = abs(cy - self.imscale*0.438*sin(radians(ori)))
 
-        sensor_L1_posx = x_sensor_centro + self.imscale*3*0.08*cos(radians(ori+90))
-        sensor_L1_posy = y_sensor_centro + self.imscale*3*0.08*sin(radians(ori-90))
+        # sensor_L1_posx = x_sensor_centro + self.imscale*3*0.08*cos(radians(ori+90))
+        # sensor_L1_posy = y_sensor_centro + self.imscale*3*0.08*sin(radians(ori-90))
+
+        # sensor_L2_posx = x_sensor_centro + self.imscale*2*0.08*cos(radians(ori+90))
+        # sensor_L2_posy = y_sensor_centro + self.imscale*2*0.08*sin(radians(ori-90))
+
+        # sensor_L3_posx = x_sensor_centro + self.imscale*1*0.08*cos(radians(ori+90))
+        # sensor_L3_posy = y_sensor_centro + self.imscale*1*0.08*sin(radians(ori-90))
+
+        # sensor_R1_posx = x_sensor_centro + self.imscale*3*0.08*cos(radians(ori-90))
+        # sensor_R1_posy = y_sensor_centro + self.imscale*3*0.08*sin(radians(ori+90))
+
+        # sensor_R2_posx = x_sensor_centro + self.imscale*2*0.08*cos(radians(ori-90))
+        # sensor_R2_posy = y_sensor_centro + self.imscale*2*0.08*sin(radians(ori+90))
+
+        # sensor_R3_posx = x_sensor_centro + self.imscale*1*0.08*cos(radians(ori-90))
+        # sensor_R3_posy = y_sensor_centro + self.imscale*1*0.08*sin(radians(ori+90))
+        
+        # Distance Sensors location
+        sensorDIST_center_posx = cx + self.imscale*0.5*cos(radians(ori))
+        sensorDIST_center_posy = cy - self.imscale*0.5*sin(radians(ori))
 
         sensorDIST_left_posx = cx + self.imscale*0.5*cos(radians(ori+60))
         sensorDIST_left_posy = cy - self.imscale*0.5*sin(radians(ori+60))
 
-        sensor_L2_posx = x_sensor_centro + self.imscale*2*0.08*cos(radians(ori+90))
-        sensor_L2_posy = y_sensor_centro + self.imscale*2*0.08*sin(radians(ori-90))
-        sensor_L3_posx = x_sensor_centro + self.imscale*1*0.08*cos(radians(ori+90))
-        sensor_L3_posy = y_sensor_centro + self.imscale*1*0.08*sin(radians(ori-90))
+        sensorDIST_right_posx = cx + self.imscale*0.5*cos(radians(ori-60))
+        sensorDIST_right_posy = cy - self.imscale*0.5*sin(radians(ori-60))
 
-        sensor_R1_posx = x_sensor_centro + self.imscale*3*0.08*cos(radians(ori-90))
-        sensor_R1_posy = y_sensor_centro + self.imscale*3*0.08*sin(radians(ori+90))
+        sensorDIST_back_posx = cx + self.imscale*0.5*cos(radians(ori+180))
+        sensorDIST_back_posy = cy - self.imscale*0.5*sin(radians(ori+180))
 
-        sensor_R2_posx = x_sensor_centro + self.imscale*2*0.08*cos(radians(ori-90))
-        sensor_R2_posy = y_sensor_centro + self.imscale*2*0.08*sin(radians(ori+90))
+        sensorDIST_center_endpointleft_x = sensorDIST_center_posx + self.imscale*centerDIST*cos(radians(ori + sensorDIST_center_ori + sensorDIST_apparture))
+        sensorDIST_center_endpointleft_y = sensorDIST_center_posy - self.imscale*centerDIST*sin(radians(ori + sensorDIST_center_ori + sensorDIST_apparture))
+        sensorDIST_center_endpointcenter_x = sensorDIST_center_posx + self.imscale*centerDIST*cos(radians(ori + sensorDIST_center_ori))
+        sensorDIST_center_endpointcenter_y = sensorDIST_center_posy - self.imscale*centerDIST*sin(radians(ori + sensorDIST_center_ori))
+        sensorDIST_center_endpointright_x = sensorDIST_center_posx + self.imscale*centerDIST*cos(radians(ori + sensorDIST_center_ori - sensorDIST_apparture))
+        sensorDIST_center_endpointright_y = sensorDIST_center_posy - self.imscale*centerDIST*sin(radians(ori + sensorDIST_center_ori - sensorDIST_apparture))
 
-        sensor_R3_posx = x_sensor_centro + self.imscale*1*0.08*cos(radians(ori-90))
-        sensor_R3_posy = y_sensor_centro + self.imscale*1*0.08*sin(radians(ori+90))
+        sensorDIST_left_endpointleft_x = sensorDIST_left_posx + self.imscale*leftDIST*cos(radians(ori + sensorDIST_left_ori + sensorDIST_apparture))
+        sensorDIST_left_endpointleft_y = sensorDIST_left_posy - self.imscale*leftDIST*sin(radians(ori + sensorDIST_left_ori + sensorDIST_apparture))
+        sensorDIST_left_endpointcenter_x = sensorDIST_left_posx + self.imscale*leftDIST*cos(radians(ori + sensorDIST_left_ori))
+        sensorDIST_left_endpointcenter_y = sensorDIST_left_posy - self.imscale*leftDIST*sin(radians(ori + sensorDIST_left_ori))
+        sensorDIST_left_endpointright_x = sensorDIST_left_posx + self.imscale*leftDIST*cos(radians(ori + sensorDIST_left_ori - sensorDIST_apparture))
+        sensorDIST_left_endpointright_y = sensorDIST_left_posy - self.imscale*leftDIST*sin(radians(ori + sensorDIST_left_ori - sensorDIST_apparture))
+
+        sensorDIST_right_endpointleft_x = sensorDIST_right_posx + self.imscale*rightDIST*cos(radians(ori + sensorDIST_right_ori + sensorDIST_apparture))
+        sensorDIST_right_endpointleft_y = sensorDIST_right_posy - self.imscale*rightDIST*sin(radians(ori + sensorDIST_right_ori + sensorDIST_apparture))
+        sensorDIST_right_endpointcenter_x = sensorDIST_right_posx + self.imscale*rightDIST*cos(radians(ori + sensorDIST_right_ori))
+        sensorDIST_right_endpointcenter_y = sensorDIST_right_posy - self.imscale*rightDIST*sin(radians(ori + sensorDIST_right_ori))
+        sensorDIST_right_endpointright_x = sensorDIST_right_posx + self.imscale*rightDIST*cos(radians(ori + sensorDIST_right_ori - sensorDIST_apparture))
+        sensorDIST_right_endpointright_y = sensorDIST_right_posy - self.imscale*rightDIST*sin(radians(ori + sensorDIST_right_ori - sensorDIST_apparture))
+
+        sensorDIST_back_endpointleft_x = sensorDIST_back_posx + self.imscale*backDIST*cos(radians(ori + sensorDIST_back_ori + sensorDIST_apparture))
+        sensorDIST_back_endpointleft_y = sensorDIST_back_posy - self.imscale*backDIST*sin(radians(ori + sensorDIST_back_ori + sensorDIST_apparture))
+        sensorDIST_back_endpointcenter_x = sensorDIST_back_posx + self.imscale*backDIST*cos(radians(ori + sensorDIST_back_ori))
+        sensorDIST_back_endpointcenter_y = sensorDIST_back_posy - self.imscale*backDIST*sin(radians(ori + sensorDIST_back_ori))
+        sensorDIST_back_endpointright_x = sensorDIST_back_posx + self.imscale*backDIST*cos(radians(ori + sensorDIST_back_ori - sensorDIST_apparture))
+        sensorDIST_back_endpointright_y = sensorDIST_back_posy - self.imscale*backDIST*sin(radians(ori + sensorDIST_back_ori - sensorDIST_apparture))
+
+        
+        
 
         # Draws of robot elements
         cv2.circle(self.img,(int(cx),int(cy)), 20, (250,250,250), 2) # Circulo centrado no centro do robot real
         cv2.line( self.img, (int(cx),int(cy)), (int(cx+radious*self.imscale*cos(radians(ori))), int(cy-(radious*self.imscale*sin(radians(ori))))), (255,255,255),1) # Linha do centro do robot direcionada segundo orientaçao
         
-        cv2.circle(self.img, (int(x_sensor_centro),int(y_sensor_centro)), 2, (0,0,253), -1)
-
-        cv2.circle(self.img, (int(sensorDIST_left_posx),int(sensorDIST_left_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(x_sensor_centro),int(y_sensor_centro)), 2, (0,0,253), -1)
         
-        cv2.circle(self.img, (int(sensor_L1_posx),int(sensor_L1_posy)), 2, (0,0,253), -1)
-        cv2.circle(self.img, (int(sensor_L2_posx),int(sensor_L2_posy)), 2, (0,0,253), -1)
-        cv2.circle(self.img, (int(sensor_L3_posx),int(sensor_L3_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_L1_posx),int(sensor_L1_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_L2_posx),int(sensor_L2_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_L3_posx),int(sensor_L3_posy)), 2, (0,0,253), -1)
 
-        cv2.circle(self.img, (int(sensor_R1_posx),int(sensor_R1_posy)), 2, (0,0,253), -1)
-        cv2.circle(self.img, (int(sensor_R2_posx),int(sensor_R2_posy)), 2, (0,0,253), -1)
-        cv2.circle(self.img, (int(sensor_R3_posx),int(sensor_R3_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_R1_posx),int(sensor_R1_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_R2_posx),int(sensor_R2_posy)), 2, (0,0,253), -1)
+        # cv2.circle(self.img, (int(sensor_R3_posx),int(sensor_R3_posy)), 2, (0,0,253), -1)
+
+        
+        cv2.circle(self.img, (int(sensorDIST_left_posx),int(sensorDIST_left_posy)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_center_posx),int(sensorDIST_center_posy)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_right_posx),int(sensorDIST_right_posy)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_back_posx),int(sensorDIST_back_posy)), 2, (0,0,253), -1)
+
+        cv2.circle(self.img, (int(sensorDIST_center_endpointleft_x),int(sensorDIST_center_endpointleft_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_center_endpointcenter_x),int(sensorDIST_center_endpointcenter_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_center_endpointright_x),int(sensorDIST_center_endpointright_y)), 2, (0,0,253), -1)
+
+        cv2.circle(self.img, (int(sensorDIST_left_endpointleft_x),int(sensorDIST_left_endpointleft_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_left_endpointcenter_x),int(sensorDIST_left_endpointcenter_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_left_endpointright_x),int(sensorDIST_left_endpointright_y)), 2, (0,0,253), -1)
+
+        cv2.circle(self.img, (int(sensorDIST_right_endpointleft_x),int(sensorDIST_right_endpointleft_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_right_endpointcenter_x),int(sensorDIST_right_endpointcenter_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_right_endpointright_x),int(sensorDIST_right_endpointright_y)), 2, (0,0,253), -1)
+
+        cv2.circle(self.img, (int(sensorDIST_back_endpointleft_x),int(sensorDIST_back_endpointleft_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_back_endpointcenter_x),int(sensorDIST_back_endpointcenter_y)), 2, (0,0,253), -1)
+        cv2.circle(self.img, (int(sensorDIST_back_endpointright_x),int(sensorDIST_back_endpointright_y)), 2, (0,0,253), -1)
+
+
 
 
         #print(f'\nGPS: x: {40*x+40*cos(ori)}   y: {40*y+40*sin(ori)}   theta: {ori}')

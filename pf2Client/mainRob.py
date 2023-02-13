@@ -138,7 +138,7 @@ class MyRob(CRobLinkAngs):
         # self.particulas.showParticles(self.posx, self.posy, self.ori, self.ori, self.robot_diameter)                     
         
         # Show Particles (real_posx, real_posy), and show the position of robot calculated by odometry (Uncomment next line to activate)
-        self.particulas.showParticles(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter)           
+        self.particulas.showParticles(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter, self.DISTsens)           
         
         # print(f'Elapsed time: {1000*(stop-start):.0f}ms\t Time for Image Show: {1000*(stop2-stop):.0f}\t Total: {1000*(stop2-start):.0f}\t Time resample(): {1000*(stop-stop3):.0f}')
          
@@ -196,12 +196,17 @@ class MyRob(CRobLinkAngs):
         
         self.LINEsens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
 
+        # Sensor de distacia
         IRsens = self.measures.irSensor
-        # print(self.measures.irSensor)
+        
         distancias = []
         for i,v in enumerate(IRsens):
             if v != 0.0:
-                distancias.append(1/v)
+                distancia = 1/v
+                if distancia < 4:
+                    distancias.append(distancia)
+                else:
+                    distancias.append(10)
             else:
                 distancias.append(10)
         self.DISTsens = distancias
