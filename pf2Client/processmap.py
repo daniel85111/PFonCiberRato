@@ -1,16 +1,43 @@
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+from lxml import etree
 class map():
-    def __init__(self, directory = "../Labs/2223-pf/C2-lab.xml", scale = 10):
+    def __init__(self, directory = "../Labs/2223-pf/C2-lab.xml", scale = 100, mapmax_x = 28, mapmax_y = 14):
         self.directory = directory
-        self.scalee = scale
+        self.scale = scale
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
 
+        self.areas = self.calculateAreas()
+        self.map, self.map_cropped = self.calculateMap()
+        self.distance_map_cropped, self.distance_map_full = self.calculateDistanceMap()
+
+        np.savetxt('Dist MAP', self.distance_map_cropped, fmt='%2.2f', delimiter=', ')
+    
+    #----------------------------------------------------------------    
+    def getAreas(self):
+        return self.areas
+
     def getScale(self):
-        return self.scalee
+        return self.scale
 
     def getDirectory(self):
         return self.directory
-
+    
+    def getMap(self):
+        return self.map
+    
+    def getMapCropped(self):
+        return self.map_cropped
+    
+    def getDistanceMap(self):
+        return self.distance_map_full
+    
+    def getDistanceMapCropped(self):
+        return self.distance_map_cropped
+    
+    # ---------------------------------------------------------------
     def parseXML(self,xmlFile):
         """
         Parse the XML
@@ -29,7 +56,7 @@ class map():
         #print(dic)
         return dic
 
-    def getAreas(self):
+    def calculateAreas(self):
         array = self.parseXML(self.directory)
         areas = []
         for i,v in enumerate(array):
@@ -52,13 +79,11 @@ class map():
         #print(areas[1][1])
         return areas    # ([minx,miny], [maxx,maxy])
 
-    def getMap(self):
-        scale = 100
-
-        mapstartx = scale*self.mapmax_x
-        mapstarty = scale*self.mapmax_y
-        mapendx = 2*scale*self.mapmax_x
-        mapendy = 2*scale*self.mapmax_y
+    def calculateMap(self):
+        mapstartx = self.scale*self.mapmax_x
+        mapstarty = self.scale*self.mapmax_y
+        mapendx = 2*self.scale*self.mapmax_x
+        mapendy = 2*self.scale*self.mapmax_y
 
         topleft = (mapstartx,mapstarty)
         topright = (mapendx,mapstarty)
@@ -74,10 +99,10 @@ class map():
         
         for i,v in enumerate(self.areas): # v[0][0] = xmin v[0][1] = ymin
             # print(f'i = {i}\t v= {v}')
-            xmin = int(scale*v[0][0])
-            ymin = int(scale*v[0][1])
-            xmax = int(scale*v[1][0])
-            ymax = int(scale*v[1][1])
+            xmin = int(self.scale*v[0][0])
+            ymin = int(self.scale*v[0][1])
+            xmax = int(self.scale*v[1][0])
+            ymax = int(self.scale*v[1][1])
             # print(f' xmin= {xmin}\t ymin= {ymin}\t xmax= {xmax}\t ymax= {ymax}\t')
             area_topleft     =  (mapstartx+xmin, mapstarty+ymin)
             area_topright    =  (mapstartx+xmax, mapstarty+ymin)
@@ -99,9 +124,9 @@ class map():
         # cv2.waitKey(0) ^
         # plt.imshow(cropped)
         # plt.show() 
-        return arr,cropped,scale
+        return arr,cropped
 
-    def getDistanceMap(self):
+    def calculateDistanceMap(self):
         cropped = self.map_cropped
         cropped = cv2.bitwise_not(cropped)
         cropped = cropped.astype(np.uint8)
@@ -111,11 +136,11 @@ class map():
         full = full.astype(np.uint8)
         
 
-        distmap_cropped = cv2.distanceTransform(cropped, cv2.DIST_L2, 5)
-        distmap_full = cv2.distanceTransform(full, cv2.DIST_L2, 5)
+        distmap_cropped = cv2.distanceTransform(cropped, cv2.DIST_L2, 5)/self.scale
+        distmap_full = cv2.distanceTransform(full, cv2.DIST_L2, 5)/self.scale
 
         # plt.imshow(distmap_cropped)
         # plt.show()
         # plt.imshow(distmap_full)
         # plt.show() 
-        return distmap_cropped
+        return distmap_cropped, distmap_full

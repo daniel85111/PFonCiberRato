@@ -1,5 +1,6 @@
 #import particles
 import viewercv
+import processmap
 import numpy as np
 from matplotlib import pyplot as plt
 from math import *
@@ -13,20 +14,48 @@ class particula():
         self.y = y
         self.ori = ori
         self.weight = w
-        self.sensor_center_posx = self.x + 0.438*cos(radians(ori))
-        self.sensor_center_posy = self.y - 0.438*sin(radians(ori))
-
+        
+        # Sensores de distnacia
         self.sensorDIST_center_posx = self.x + 0.5*cos(radians(ori))
         self.sensorDIST_center_posy = self.y - 0.5*sin(radians(ori))
+        self.sensorDIST_center_endpointleft_x = None
+        self.sensorDIST_center_endpointleft_y = None
+        self.sensorDIST_center_endpointcenter_x = None
+        self.sensorDIST_center_endpointcenter_y = None
+        self.sensorDIST_center_endpointright_x = None
+        self.sensorDIST_center_endpointright_y = None
 
+        
         self.sensorDIST_left_posx = self.x + 0.5*cos(radians(ori+60))
         self.sensorDIST_left_posy = self.y - 0.5*sin(radians(ori+60))
+        self.sensorDIST_left_endpointleft_x = None
+        self.sensorDIST_left_endpointleft_y = None
+        self.sensorDIST_left_endpointcenter_x = None
+        self.sensorDIST_left_endpointcenter_y = None
+        self.sensorDIST_left_endpointright_x = None
+        self.sensorDIST_left_endpointright_y = None
 
         self.sensorDIST_right_posx = self.x + 0.5*cos(radians(ori-60))
         self.sensorDIST_right_posy = self.y - 0.5*sin(radians(ori-60))
+        self.sensorDIST_right_endpointleft_x = None
+        self.sensorDIST_right_endpointleft_y = None
+        self.sensorDIST_right_endpointcenter_x = None
+        self.sensorDIST_right_endpointcenter_y = None
+        self.sensorDIST_right_endpointright_x = None
+        self.sensorDIST_right_endpointright_y = None
 
         self.sensorDIST_back_posx = self.x + 0.5*cos(radians(ori+180))
         self.sensorDIST_back_posy = self.y - 0.5*sin(radians(ori+180))
+        self.sensorDIST_back_endpointleft_x = None
+        self.sensorDIST_back_endpointleft_y = None
+        self.sensorDIST_back_endpointcenter_x = None
+        self.sensorDIST_back_endpointcenter_y = None
+        self.sensorDIST_back_endpointright_x = None
+        self.sensorDIST_back_endpointright_y = None
+        
+        # Sensores de linha
+        self.sensor_center_posx = self.x + 0.438*cos(radians(ori))
+        self.sensor_center_posy = self.y - 0.438*sin(radians(ori))
 
         self.sensor_L1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori+90))
         self.sensor_L1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori-90))
@@ -57,14 +86,14 @@ class filtroParticulas():
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
         self.norm_weights = []
-        self.areas = self.getAreas()
-        
-        self.map, self.map_cropped, self.map_scale_factor = self.getMap()
 
-        self.distance_map_cropped, self.distance_map_full = self.getDistanceMap()
-        np.savetxt('Dist MAP', self.distance_map_cropped, fmt='%2.1f', delimiter=', ')
-
-        #print(self.map)
+        mapa = processmap.map()
+        self.areas = mapa.getAreas()
+        self.map_scale_factor = mapa.getScale()
+        self.map = mapa.getMap()
+        self.map_cropped = mapa.getMapCropped()
+        self.distance_map_full = mapa.getDistanceMap()
+        self.distance_map_cropped = mapa.getDistanceMapCropped()
 
         for i in range (self.n_part):
             # Orientacao random
@@ -82,116 +111,7 @@ class filtroParticulas():
             #self.ori.append(self.particulas[i][-1])
             #self.ori.append(0)
 
-        self.biewer = viewercv.ViewParticles(self.mapmax_x, self.mapmax_y, self.particulas, self.areas)
-
-    def parseXML(self,xmlFile):
-        """
-        Parse the XML
-        """
-        dic = []
-        with open(xmlFile) as fobj:
-            xml = fobj.read()
-        root = etree.fromstring(xml)
-        
-        for labs in root.getchildren():
-            if(labs.tag=="Wall"):
-                for elem in labs.getchildren():
-                    #print(elem.tag=="Corner")
-                    if(elem.tag=="Corner"):
-                        dic.append(elem.attrib)
-        #print(dic)
-        return dic
-
-    def getAreas(self):
-        array = self.parseXML("../Labs/2223-pf/C2-lab.xml")
-        areas = []
-        for i,v in enumerate(array):
-            if i%4 == 0:
-                if i != 0:
-                    areas.append([[minx,14-maxy],[maxx,14-miny]])
-                minx = float(v['X'])
-                miny = float(v['Y'])
-                maxx = float(v['X'])
-                maxy = float(v['Y'])
-
-            if float(v['X']) < minx: minx = float(v['X'])
-            if float(v['Y']) < miny: miny = float(v['Y'])
-            if float(v['X']) > maxx: maxx = float(v['X'])
-            if float(v['Y']) > maxy: maxy = float(v['Y'])
-            
-            if i == len(array)-1:
-                areas.append([[minx,14-maxy],[maxx,14-miny]]) 
-                #print(areas)
-        #print(areas[1][1])
-        return areas    # ([minx,miny], [maxx,maxy])
-
-    def getMap(self):
-        scale = 100
-
-        mapstartx = scale*self.mapmax_x
-        mapstarty = scale*self.mapmax_y
-        mapendx = 2*scale*self.mapmax_x
-        mapendy = 2*scale*self.mapmax_y
-
-        topleft = (mapstartx,mapstarty)
-        topright = (mapendx,mapstarty)
-        bottomright = (mapendx, mapendy)
-        bottomleft = (mapstartx, mapendy)
-
-        arr = np.zeros((3*mapstarty,3*mapstartx,1), np.uint8)
-
-        cv2.line(arr, (topleft), (topright),255,1)
-        cv2.line(arr, (topright), (bottomright),255,1)
-        cv2.line(arr, (bottomright), (bottomleft),255,1)       
-        cv2.line(arr, (bottomleft), (topleft),255,1)
-        
-        for i,v in enumerate(self.areas): # v[0][0] = xmin v[0][1] = ymin
-            # print(f'i = {i}\t v= {v}')
-            xmin = int(scale*v[0][0])
-            ymin = int(scale*v[0][1])
-            xmax = int(scale*v[1][0])
-            ymax = int(scale*v[1][1])
-            # print(f' xmin= {xmin}\t ymin= {ymin}\t xmax= {xmax}\t ymax= {ymax}\t')
-            area_topleft     =  (mapstartx+xmin, mapstarty+ymin)
-            area_topright    =  (mapstartx+xmax, mapstarty+ymin)
-            area_bottomright =  (mapstartx+xmax, mapstarty+ymax)
-            area_bottomleft  =  (mapstartx+xmin, mapstarty+ymax)
-
-            cv2.line(arr, (area_topleft), (area_topright), 255,1)
-            cv2.line(arr, (area_topright), (area_bottomright), 255,1)
-            cv2.line(arr, (area_bottomright), (area_bottomleft), 255,1)
-            cv2.line(arr, (area_bottomleft), (area_topleft), 255,1)
-
-        # cv2.imshow("Resized image", arr)
-        # cv2.waitKey(0)  
-        # plt.imshow(arr)
-        # plt.show() 
-       
-        cropped = arr[mapstarty:mapendy+1, mapstartx:mapendx+1]
-        # cv2.imshow("Resized image", cropped)
-        # cv2.waitKey(0) ^
-        # plt.imshow(cropped)
-        # plt.show() 
-        return arr,cropped,scale
-
-    def getDistanceMap(self):
-        cropped = self.map_cropped
-        cropped = cv2.bitwise_not(cropped)
-        cropped = cropped.astype(np.uint8)
-
-        full = self.map
-        full = cv2.bitwise_not(full)
-        full = full.astype(np.uint8)
-        
-
-        distmap_cropped = cv2.distanceTransform(cropped, cv2.DIST_L2, 5)
-        distmap_full = cv2.distanceTransform(full, cv2.DIST_L2, 5)
-
-        # plt.imshow(distmap_cropped)
-        # plt.show()
-        # plt.imshow(distmap_full)
-        # plt.show() 
-        return distmap_cropped, distmap_full
+        self.visualizer = viewercv.ViewParticles(self.mapmax_x, self.mapmax_y, self.particulas, self.areas)
 
     def odometry_move_particles(self, motors, motors_noise):       
         self.motors = motors
@@ -306,10 +226,11 @@ class filtroParticulas():
             particle_rightDIST = self.distance_map_full[sensorDIST_right_index[1],sensorDIST_right_index[0]]
             particle_backDIST = self.distance_map_full[sensorDIST_back_index[1],sensorDIST_back_index[0]]
 
-            centerDIFF = (particle_centerDIST/self.map_scale_factor - centerDIST)**2
-            leftDIFF = (particle_leftDIST/self.map_scale_factor - leftDIST)**2
-            rightDIFF = (particle_rightDIST/self.map_scale_factor - rightDIST)**2
-            backDIFF = (particle_backDIST/self.map_scale_factor - backDIST)**2
+            # TIrar divisao daqui e passar para a criação do mapa
+            centerDIFF = (particle_centerDIST - centerDIST)**2
+            leftDIFF = (particle_leftDIST - leftDIST)**2
+            rightDIFF = (particle_rightDIST - rightDIST)**2
+            backDIFF = (particle_backDIST - backDIST)**2
             
             
             # particula.weight +=  exp(-centerDIFF/sigma)
@@ -344,9 +265,9 @@ class filtroParticulas():
 
     # Use the viewer functions of viewercv to show particles in the cv window
     def showParticles(self,real_posx,real_posy,ori, diameter):
-        self.biewer.clearImg()
-        self.biewer.drawMap(self.map)
-        self.biewer.updateParticles(self.particulas)
-        self.biewer.drawParticles()
-        self.biewer.drawReal(real_posx,real_posy,ori, diameter)
-        self.biewer.showImg()
+        self.visualizer.clearImg()
+        self.visualizer.drawMap(self.map)
+        self.visualizer.updateParticles(self.particulas)
+        self.visualizer.drawParticles()
+        self.visualizer.drawReal(real_posx,real_posy,ori, diameter)
+        self.visualizer.showImg()
