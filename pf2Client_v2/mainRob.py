@@ -16,8 +16,8 @@ CELLROWS=7
 CELLCOLS=14
 
 class MyRob(CRobLinkAngs):
-    def __init__(self, rob_name, rob_id, angles, host):
-        CRobLinkAngs.__init__(self, rob_name, rob_id, angles, host)
+    def __init__(self, rob_name, rob_id, IRangles, host):
+        CRobLinkAngs.__init__(self, rob_name, rob_id, IRangles, host)
         # Constants
         self.rob_name = rob_name
         self.robot_diameter = 1
@@ -52,8 +52,9 @@ class MyRob(CRobLinkAngs):
         self.visualizer.drawMap(self.mapa)
 
         # Particle filter
-        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, n_part=3000)
+        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, n_part=3000)
         self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+        self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles)
         self.visualizer.showImg()
 
     def setMap(self, labMap):
@@ -63,7 +64,7 @@ class MyRob(CRobLinkAngs):
         for l in reversed(self.labMap):
             print(''.join([str(l) for l in l]))
 
-    def run(self):
+    def run(self, IRangles):
         if self.status != 0:
             print("Connection refused or error")
             quit()
@@ -101,7 +102,7 @@ class MyRob(CRobLinkAngs):
                 if self.measures.visitingLed==True:
                     state='wait'
                 if self.measures.ground==0:
-                    self.setVisitingLed(True);
+                    self.setVisitingLed(True)
                 self.wander()
             elif state=='wait':
                 self.setReturningLed(True)
@@ -134,15 +135,17 @@ class MyRob(CRobLinkAngs):
                 self.posy = self.measures.y - self.initialy           # Coordenada Y em relação à posição inicial + Offset
             
             self.odometry_move_robot(self.motors)                                 # Movimento do robot calculado por odometria
-            self.update_particle_filter(state,  weight_calculation_method = 2)                                    # Atualizar filtro de particulas
+            self.update_particle_filter(IRangles, state,  weight_calculation_method = 2)    # Atualizar filtro de particulas
+            
 
 
 
-    def update_particle_filter(self, state, weight_calculation_method = 3):
+    def update_particle_filter(self, IRangles, state, weight_calculation_method = 3):
         time_move_particles = 0
         time_weight_calculation = 0
         time_weight_normalization = 0
         time_resample = 0
+        time_drawing = 0
         
 
 
@@ -156,12 +159,15 @@ class MyRob(CRobLinkAngs):
             
             start = time.perf_counter()
             self.filtro_particulas.weights_calculation(self.LINEsens, self.DISTsens, weight_calculation_method)  # Calcular pesos de cada particula
-            self.visualizer.drawMap(self.mapa)
-            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-            self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens)
-            self.visualizer.showImg()
             end = time.perf_counter()
             time_weight_calculation = 1000*(end-start)
+            start = time.perf_counter()
+            self.visualizer.drawMap(self.mapa)
+            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+            self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles)
+            self.visualizer.showImg()
+            end = time.perf_counter()
+            time_drawing = 1000*(end-start)
 
             start = time.perf_counter()
             self.filtro_particulas.weights_normalization()            # Normalizar peso de cada particula            
@@ -174,18 +180,10 @@ class MyRob(CRobLinkAngs):
             time_resample = 1000*(end-start)
 
         
-        start = timeit.default_timer() 
-        # Show Particles (real_posx, real_posy), and show the position of robot calculated by odometry (Uncomment next line to activate)
-        # self.filtro_particulas.showParticles(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter, self.DISTsens)
-        # Show Particles (real_posx, real_posy), and show the real position of robot (Uncomment next line to activate)        
-        # self.filtro_particulas.showParticles(self.posx, self.posy, self.ori, self.robot_diameter,  self.DISTsens)
+        total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_drawing
 
-        
-        end = timeit.default_timer() 
-        time_image_update = 1000*(end-start)
-        total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_image_update
 
-        print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | Od_Move: {(time_move_particles):.1f} | Image: {(time_image_update):.1f} | W_norm: {(time_weight_normalization):.1f})')
+        print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | Image: {(time_drawing):.1f})')
         
 
     def wander(self):
@@ -193,49 +191,55 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-        if    self.measures.irSensor[center_id] > 4.0:
-            #print('Rotate left')
-            #self.driveMotors(-0.1,+0.1)
-            if self.rotation == 0:
-                lpow = -0.15
-                
-            else:
-                lpow = +0.15
-            rpow = -lpow
-            self.motors = (lpow, rpow) 
-            self.driveMotors(lpow,rpow)
+        if not self.measures.collision:
+            if    self.measures.irSensor[center_id] > 4.0:
+                #print('Rotate left')
+                #self.driveMotors(-0.1,+0.1)
+                if self.rotation == 0:
+                    lpow = -0.15
+                    
+                else:
+                    lpow = +0.15
+                rpow = -lpow
+                self.motors = (lpow, rpow) 
+                self.driveMotors(lpow,rpow)
 
-        elif self.measures.irSensor[left_id]> 1.2:
-            #print('Rotate slowly right')
-            #self.driveMotors(0.1,0.0)
-            lpow = 0.1
-            rpow = 0.0
-            self.motors = (lpow, rpow)
-            self.driveMotors(lpow,rpow)
-
-        elif self.measures.irSensor[right_id]> 1.2:
-            #print('Rotate slowly left')
-            #self.driveMotors(0.0,0.1)
-            lpow = 0.0
-            rpow = 0.1
-            self.motors = (lpow, rpow)
-            self.driveMotors(lpow,rpow)
-
-        else:
-            self.rotation = random.randint(0,1)
-            #$print('Go')
-            if (self.measures.stop) :
-                lpow = 0.0
+            elif self.measures.irSensor[left_id]> 1.2:
+                #print('Rotate slowly right')
+                #self.driveMotors(0.1,0.0)
+                lpow = 0.1
                 rpow = 0.0
                 self.motors = (lpow, rpow)
-                self.driveMotors(self.motors)
+                self.driveMotors(lpow,rpow)
+
+            elif self.measures.irSensor[right_id]> 1.2:
+                #print('Rotate slowly left')
+                #self.driveMotors(0.0,0.1)
+                lpow = 0.0
+                rpow = 0.1
+                self.motors = (lpow, rpow)
+                self.driveMotors(lpow,rpow)
 
             else:
-                #print(f'Xg: {self.posx:.2f}    Yg: {self.posy:.2f}    thetag: {self.ori}')
-                lpow = 0.1
-                rpow = 0.1
-                self.motors = (lpow, rpow) 
-                self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
+                self.rotation = random.randint(0,1)
+                #$print('Go')
+                if (self.measures.stop) :
+                    lpow = 0.0
+                    rpow = 0.0
+                    self.motors = (lpow, rpow)
+                    self.driveMotors(self.motors)
+
+                else:
+                    #print(f'Xg: {self.posx:.2f}    Yg: {self.posy:.2f}    thetag: {self.ori}')
+                    lpow = 0.1
+                    rpow = 0.1
+                    self.motors = (lpow, rpow) 
+                    self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
+        else:
+            lpow = -0.1
+            rpow = -0.15
+            self.motors = (lpow, rpow) 
+            self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
 
         
         self.LINEsens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
@@ -245,15 +249,15 @@ class MyRob(CRobLinkAngs):
         
         distancias = []
         for i,v in enumerate(IRsens):
-            # distancias.append(1/v)
-            if v != 0.0:
-                distancia = 1/v
-                if distancia < 6:
-                    distancias.append(distancia)
-                else:
-                    distancias.append(10)
-            else:
-                distancias.append(10)
+            distancias.append(1/v)
+            # if v != 0.0:
+            #     distancia = 1/v
+            #     if distancia < 6:
+            #         distancias.append(distancia)
+            #     else:
+            #         distancias.append(10)
+            # else:
+            #     distancias.append(10)
         self.DISTsens = distancias
         # print(f'Center: {distancias[center_id]:.2f}\tLeft: {distancias[left_id]:.2f}\tRight: {distancias[right_id]:.2f}\tBack: {distancias[back_id]:.2f}')
 
@@ -336,9 +340,10 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
-    rob=MyRob(rob_name,pos,[0.0,80.0,-80.0,180.0],host)
+    IRangles = [0.0,90.0,-90.0,180.0]
+    rob=MyRob(rob_name,pos,IRangles,host)
     if mapc != None:
         rob.setMap(mapc.labMap)
         rob.printMap()
     
-    rob.run()
+    rob.run(IRangles)

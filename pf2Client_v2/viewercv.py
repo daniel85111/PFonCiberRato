@@ -76,7 +76,7 @@ class ViewParticles():
 
 
 
-    def drawReal(self,x,y,ori, diameter, DISTsens):
+    def drawReal(self,x,y,ori, diameter, DISTsens, IRangles):
         # Constants and calculation of positions in the cv window
         y_correction = int(14)*self.imscale     # In OpenCV the (0,0) is top-left but from the simulator is bottom-left
         radious = 0.5*diameter                  # Robot real radious
@@ -86,10 +86,10 @@ class ViewParticles():
 
         sensorDIST_apparture = 30
         centerDIST, leftDIST, rightDIST, backDIST = DISTsens
-        sensorDIST_center_ori = 0
-        sensorDIST_left_ori  = 90
-        sensorDIST_right_ori = -90
-        sensorDIST_back_ori = 180
+        sensorDIST_center_ori = IRangles[0]
+        sensorDIST_left_ori  = IRangles[1]
+        sensorDIST_right_ori = IRangles[2]
+        sensorDIST_back_ori = IRangles[3]
 
 
         cx = self.imscale*(x+self.xinit_real[0])                     # Center of robot
