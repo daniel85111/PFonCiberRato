@@ -74,7 +74,15 @@ class ViewParticles():
             # cv2.circle(self.img, (x_sensor_R2,y_sensor_R2), 1, (0,0,253), -1)                 # Draw sensor Right2 
             # cv2.circle(self.img, (x_sensor_R3,y_sensor_R3), 1, (0,0,253), -1)                 # Draw sensor Right3
 
-
+    def drawFinalPose(self,final_pose):
+         # Draws of robot elements
+        x,y,ori = final_pose
+        x = x*self.imscale
+        y = y*self.imscale
+        radious = 0.25
+        cv2.circle(self.img,(int(x),int(y)), 10, (200,0,0), -1) # Circulo centrado no centro do robot real
+        cv2.line( self.img, (int(x),int(y)), (int(x+radious*self.imscale*cos(radians(ori))), int(y-(radious*self.imscale*sin(radians(ori))))), (0,0,255),2) # Linha do centro do robot direcionada segundo orientaçao
+       
 
     def drawReal(self,x,y,ori, diameter, DISTsens, IRangles):
         # Constants and calculation of positions in the cv window
@@ -163,7 +171,7 @@ class ViewParticles():
 
         # Draws of robot elements
         cv2.circle(self.img,(int(cx),int(cy)), 20, (250,250,250), 2) # Circulo centrado no centro do robot real
-        cv2.line( self.img, (int(cx),int(cy)), (int(cx+radious*self.imscale*cos(radians(ori))), int(cy-(radious*self.imscale*sin(radians(ori))))), (255,255,255),1) # Linha do centro do robot direcionada segundo orientaçao
+        cv2.line( self.img, (int(cx),int(cy)), (int(cx+radious*self.imscale*cos(radians(ori))), int(cy-(radious*self.imscale*sin(radians(ori))))), (255,255,255),2) # Linha do centro do robot direcionada segundo orientaçao
         
         # cv2.circle(self.img, (int(x_sensor_centro),int(y_sensor_centro)), 2, (0,0,253), -1)
         

@@ -25,6 +25,7 @@ class MyRob(CRobLinkAngs):
         self.mapmax_y = 14
 
         # Movement(sensors, actuators)
+        self.backwards_counter = -1
         self.motors = (0.0,0.0)
         self.last_motors = (0.0,0.0)
         self.LINEsens = None
@@ -153,7 +154,7 @@ class MyRob(CRobLinkAngs):
         if(state != "stop"):
             self.visualizer.clearImg()
             start = time.perf_counter()
-            self.filtro_particulas.odometry_move_particles(self.motors, self.motorsNoise)    # Mover particulas 
+            self.filtro_particulas.odometry_move_particles(self.motors, self.motorsNoise, self.measures.collision)    # Mover particulas 
             end = time.perf_counter()
             time_move_particles = 1000*(end-start)
             
@@ -165,7 +166,6 @@ class MyRob(CRobLinkAngs):
             self.visualizer.drawMap(self.mapa)
             self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
             self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles)
-            self.visualizer.showImg()
             end = time.perf_counter()
             time_drawing = 1000*(end-start)
 
@@ -173,6 +173,11 @@ class MyRob(CRobLinkAngs):
             self.filtro_particulas.weights_normalization()            # Normalizar peso de cada particula            
             end = time.perf_counter()
             time_weight_normalization = 1000*(end-start)
+
+            final_pose = self.filtro_particulas.getFinalPose()
+            self.visualizer.drawFinalPose(final_pose)
+            self.visualizer.showImg()
+
 
             start = time.perf_counter()
             self.filtro_particulas.resample()      # Resample de particulas
@@ -191,7 +196,7 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-        if not self.measures.collision:
+        if not self.measures.collision and self.backwards_counter < 0:
             if    self.measures.irSensor[center_id] > 4.0:
                 #print('Rotate left')
                 #self.driveMotors(-0.1,+0.1)
@@ -236,10 +241,13 @@ class MyRob(CRobLinkAngs):
                     self.motors = (lpow, rpow) 
                     self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
         else:
+            if self.backwards_counter < 0:
+                self.backwards_counter = 3
             lpow = -0.1
-            rpow = -0.15
+            rpow = -0.1
             self.motors = (lpow, rpow) 
             self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
+            self.backwards_counter -= 1
 
         
         self.LINEsens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
@@ -340,7 +348,7 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
-    IRangles = [0.0,90.0,-90.0,180.0]
+    IRangles = [0.0,75.0,-75.0,180.0]
     rob=MyRob(rob_name,pos,IRangles,host)
     if mapc != None:
         rob.setMap(mapc.labMap)

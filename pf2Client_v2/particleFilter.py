@@ -115,9 +115,12 @@ class filtroParticulas():
             #self.ori.append(self.particulas[i][-1])
             #self.ori.append(0)
 
-    def odometry_move_particles(self, motors, motors_noise):
-        self.motors = motors
-        noite_multiplier = 5
+    def odometry_move_particles(self, motors, motors_noise, collision):
+        if collision:
+            self.motors = (-self.last_motors[0],-self.last_motors[1])
+        else:
+            self.motors = motors
+        noite_multiplier = 3
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -430,17 +433,30 @@ class filtroParticulas():
         sum_squarednormalized_weights = 0
         
         # Sum of all weights
-        for i,v in enumerate(self.particulas):
-            sum_weights += v.weight
+        for i,particula in enumerate(self.particulas):
+            sum_weights += particula.weight
 
         self.sum_weights = sum_weights
 
         # Normalize all weights
-        for i,v in enumerate(self.particulas): 
-            normalized_weight = v.weight/self.sum_weights
+        for i,particula in enumerate(self.particulas): 
+            normalized_weight = particula.weight/self.sum_weights
             self.norm_weights[i] = normalized_weight
 
             sum_squarednormalized_weights += self.norm_weights[i]**2      # sum(norm_weight[i]^2)
 
         # Store the sum of all squared normalized weights
         self.sum_squarednormalized_weights = sum_squarednormalized_weights
+
+    def getFinalPose(self):
+        x = 0
+        y = 0
+        ori = 0
+        peso_temp = 0
+        for i,particula in enumerate(self.particulas):
+            peso_temp = self.norm_weights[i]
+            x += particula.x * peso_temp
+            y += particula.y * peso_temp
+            ori += particula.ori * peso_temp
+        
+        return (x,y,ori)
