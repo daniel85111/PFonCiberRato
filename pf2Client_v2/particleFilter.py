@@ -13,11 +13,11 @@ class particula():
         self.weight = w
         
         # Sensores de distnacia
-        self.sensorDIST_apparture = 30
+        self.sensorDIST_apparture = radians(30)
 
         self.sensorDIST_center_ori = IRangles[0]
-        self.sensorDIST_center_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_center_ori))
-        self.sensorDIST_center_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_center_ori))
+        self.sensorDIST_center_posx = self.x + 0.5*cos(ori+self.sensorDIST_center_ori)
+        self.sensorDIST_center_posy = self.y - 0.5*sin(ori+self.sensorDIST_center_ori)
         self.sensorDIST_center_endpointleft_x = None
         self.sensorDIST_center_endpointleft_y = None
         self.sensorDIST_center_endpointcenter_x = None
@@ -26,8 +26,8 @@ class particula():
         self.sensorDIST_center_endpointright_y = None
 
         self.sensorDIST_left_ori = IRangles[1]
-        self.sensorDIST_left_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_left_ori))
-        self.sensorDIST_left_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_left_ori))
+        self.sensorDIST_left_posx = self.x + 0.5*cos(ori+self.sensorDIST_left_ori)
+        self.sensorDIST_left_posy = self.y - 0.5*sin(ori+self.sensorDIST_left_ori)
         self.sensorDIST_left_endpointleft_x = None
         self.sensorDIST_left_endpointleft_y = None
         self.sensorDIST_left_endpointcenter_x = None
@@ -36,8 +36,8 @@ class particula():
         self.sensorDIST_left_endpointright_y = None
 
         self.sensorDIST_right_ori = IRangles[2]
-        self.sensorDIST_right_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_right_ori))
-        self.sensorDIST_right_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_right_ori))
+        self.sensorDIST_right_posx = self.x + 0.5*cos(ori+self.sensorDIST_right_ori)
+        self.sensorDIST_right_posy = self.y - 0.5*sin(ori+self.sensorDIST_right_ori)
         self.sensorDIST_right_endpointleft_x = None
         self.sensorDIST_right_endpointleft_y = None
         self.sensorDIST_right_endpointcenter_x = None
@@ -46,8 +46,8 @@ class particula():
         self.sensorDIST_right_endpointright_y = None
 
         self.sensorDIST_back_ori = IRangles[3]
-        self.sensorDIST_back_posx = self.x + 0.5*cos(radians(ori+self.sensorDIST_back_ori))
-        self.sensorDIST_back_posy = self.y - 0.5*sin(radians(ori+self.sensorDIST_back_ori))
+        self.sensorDIST_back_posx = self.x + 0.5*cos(ori+self.sensorDIST_back_ori)
+        self.sensorDIST_back_posy = self.y - 0.5*sin(ori+self.sensorDIST_back_ori)
         self.sensorDIST_back_endpointleft_x = None
         self.sensorDIST_back_endpointleft_y = None
         self.sensorDIST_back_endpointcenter_x = None
@@ -56,8 +56,8 @@ class particula():
         self.sensorDIST_back_endpointright_y = None
         
         # Sensores de linha
-        self.sensor_center_posx = self.x + 0.438*cos(radians(ori))
-        self.sensor_center_posy = self.y - 0.438*sin(radians(ori))
+        self.sensor_center_posx = self.x + 0.438*cos(ori)
+        self.sensor_center_posy = self.y - 0.438*sin(ori)
 
         # self.sensor_L1_posx = self.sensor_center_posx + 3*0.08*cos(radians(ori+90))
         # self.sensor_L1_posy = self.sensor_center_posy + 3*0.08*sin(radians(ori-90))
@@ -87,7 +87,8 @@ class filtroParticulas():
 
         self.last_motors = (0,0)
         self.sum_squarednormalized_weights = 0
-        self.particulas = []
+        # self.particulas = []
+        self.particulas = np.empty(self.n_part, dtype=particula)
         self.norm_weights = []
 
         self.map_scale_factor = map.scale
@@ -104,7 +105,8 @@ class filtroParticulas():
             # self.particulas.append( particula( random.random() * (self.mapmax_x), random.random() * (self.mapmax_y), random.random()*360, 1, self.IRangles))
 
             # Orientacao 0
-            self.particulas.append( particula( random.random() * (self.mapmax_x), random.random() * (self.mapmax_y), 0, 1, self.IRangles))
+            # self.particulas.append( particula( random.random() * (self.mapmax_x), random.random() * (self.mapmax_y), 0, 1, self.IRangles))
+            self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles)
 
 
             #self.particulas.append((random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
@@ -137,31 +139,31 @@ class filtroParticulas():
             
             # pos
             lin = (out_l + out_r) / 2
-            x = particula.x + (lin * cos(radians(particula.ori)))
-            y = particula.y - (lin * sin(radians(particula.ori)))
+            x = particula.x + (lin * cos(particula.ori))
+            y = particula.y - (lin * sin(particula.ori))
 
             rot = out_r - out_l # / self.robot_diameter ( = 1 )
-            ori = degrees(radians(particula.ori) + rot) % 360
+            ori = (particula.ori + rot) % 6.28318530
 
 
             particula.x = x
             particula.y = y
             particula.ori = ori
 
-            particula.sensor_center_posx = x + 0.438*cos(radians(ori))
-            particula.sensor_center_posy = y - 0.438*sin(radians(ori))
+            particula.sensor_center_posx = x + 0.438*cos(ori)
+            particula.sensor_center_posy = y - 0.438*sin(ori)
 
-            particula.sensorDIST_center_posx = particula.x + 0.5*cos(radians(ori+self.IRangles[0]))
-            particula.sensorDIST_center_posy = particula.y - 0.5*sin(radians(ori+self.IRangles[0]))
+            particula.sensorDIST_center_posx = particula.x + 0.5*cos(ori+self.IRangles[0])
+            particula.sensorDIST_center_posy = particula.y - 0.5*sin(ori+self.IRangles[0])
 
-            particula.sensorDIST_left_posx = particula.x + 0.5*cos(radians(ori+self.IRangles[1]))
-            particula.sensorDIST_left_posy = particula.y - 0.5*sin(radians(ori+self.IRangles[1]))
+            particula.sensorDIST_left_posx = particula.x + 0.5*cos(ori+self.IRangles[1])
+            particula.sensorDIST_left_posy = particula.y - 0.5*sin(ori+self.IRangles[1])
 
-            particula.sensorDIST_right_posx = particula.x + 0.5*cos(radians(ori+self.IRangles[2]))
-            particula.sensorDIST_right_posy = particula.y - 0.5*sin(radians(ori+self.IRangles[2]))
+            particula.sensorDIST_right_posx = particula.x + 0.5*cos(ori+self.IRangles[2])
+            particula.sensorDIST_right_posy = particula.y - 0.5*sin(ori+self.IRangles[2])
 
-            particula.sensorDIST_back_posx = particula.x + 0.5*cos(radians(ori+self.IRangles[3]))
-            particula.sensorDIST_back_posy = particula.y - 0.5*sin(radians(ori+self.IRangles[3]))
+            particula.sensorDIST_back_posx = particula.x + 0.5*cos(ori+self.IRangles[3])
+            particula.sensorDIST_back_posy = particula.y - 0.5*sin(ori+self.IRangles[3])
 
             # particula.sensor_L1_posx = particula.sensor_center_posx + 3*0.08*cos(radians(ori+90))
             # particula.sensor_L1_posy = particula.sensor_center_posy + 3*0.08*sin(radians(ori-90))
@@ -185,28 +187,60 @@ class filtroParticulas():
             self.last_motors = (out_l,out_r)
 
 
+    # def resample(self):
+    #     n = 0.999*self.n_part
+    #     #print(f'Resample condition: {1./self.sum_squarednormalized_weights:.2f} < {n:.2f} -----> {1./self.sum_squarednormalized_weights < n}')
+    #     # if (1./self.sum_squarednormalized_weights < n):
+    #     if True:
+    #         # print("---------- ReSampling!!!!!- -----------")
+    #         indices = []
+    #         C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
+    #         u0, j = random.random(), 0
+
+    #         for u in [(u0+i)/self.n_part for i in range(self.n_part)]:
+    #             while u > C[j]:
+    #                 j+=1
+
+    #             indices.append(j-1)
+
+    #         newParticles = []
+
+    #         for i,v in enumerate(indices):
+    #             newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
+    #             newParticles[i].weight = 1
+          
+    #         self.particulas = newParticles
+
+    # Here, np.cumsum() is used to calculate the cumulative sum of the normalized weights.
+    # np.insert() is used to insert a zero at the beginning of the array to make sure the first particle is selected with non-zero probability.
+    # np.random.rand() is used to generate the uniform random numbers.
+    # Finally, np.zeros() is used to initialize the indices array with zeros, and dtype=np.int64 is specified to make sure it has the same data type as the original indices list.
+
     def resample(self):
-        n = 0.999*self.n_part
-        #print(f'Resample condition: {1./self.sum_squarednormalized_weights:.2f} < {n:.2f} -----> {1./self.sum_squarednormalized_weights < n}')
+        n = 0.999 * self.n_part
         # if (1./self.sum_squarednormalized_weights < n):
         if True:
-            # print("---------- ReSampling!!!!!- -----------")
-            indices = []
-            C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
-            u0, j = random.random(), 0
+            # Calculate cumulative sum of normalized weights
+            cum_weights = np.cumsum(self.norm_weights)
+            cum_weights = np.insert(cum_weights, 0, 0)  # Insert 0 at the beginning
 
-            for u in [(u0+i)/self.n_part for i in range(self.n_part)]:
-                while u > C[j]:
-                    j+=1
+            # Generate uniform random numbers and find corresponding indices
+            u0, j = np.random.rand(), 0
+            u_values = [(u0 + i) / self.n_part for i in range(self.n_part)]
+            indices = np.zeros(self.n_part, dtype=np.int64)
+            for i in range(self.n_part):
+                while u_values[i] > cum_weights[j]:
+                    j += 1
+                indices[i] = j - 1
 
-                indices.append(j-1)
-
-            newParticles = []
-
-            for i,v in enumerate(indices):
-                newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
+            # Create new particles with equal weight
+            # newParticles = []
+            newParticles = np.empty(self.n_part, dtype=particula)
+            for i, v in enumerate(indices):
+                # newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
+                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles)
                 newParticles[i].weight = 1
-          
+
             self.particulas = newParticles
     
     # Para o segundo metodo de calculo dos pesos
@@ -215,12 +249,12 @@ class filtroParticulas():
         acceptable_limit = 3            #IMPORTANTE
         for i,particula in enumerate(self.particulas): 
             if centerDIST <= acceptable_limit:
-                particula.sensorDIST_center_endpointleft_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_center_endpointleft_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_center_endpointcenter_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori))
-                particula.sensorDIST_center_endpointcenter_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori))
-                particula.sensorDIST_center_endpointright_x = particula.sensorDIST_center_posx + centerDIST*cos(radians(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture))
-                particula.sensorDIST_center_endpointright_y = particula.sensorDIST_center_posy - centerDIST*sin(radians(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture))
+                particula.sensorDIST_center_endpointleft_x = particula.sensorDIST_center_posx + centerDIST*cos(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_center_endpointleft_y = particula.sensorDIST_center_posy - centerDIST*sin(particula.ori + particula.sensorDIST_center_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_center_endpointcenter_x = particula.sensorDIST_center_posx + centerDIST*cos(particula.ori + particula.sensorDIST_center_ori)
+                particula.sensorDIST_center_endpointcenter_y = particula.sensorDIST_center_posy - centerDIST*sin(particula.ori + particula.sensorDIST_center_ori)
+                particula.sensorDIST_center_endpointright_x = particula.sensorDIST_center_posx + centerDIST*cos(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture)
+                particula.sensorDIST_center_endpointright_y = particula.sensorDIST_center_posy - centerDIST*sin(particula.ori + particula.sensorDIST_center_ori - particula.sensorDIST_apparture)
             else:
                 particula.sensorDIST_center_endpointleft_x = 2*self.x_offset/self.map_scale_factor - 1
                 particula.sensorDIST_center_endpointleft_y = 2*self.y_offset/self.map_scale_factor - 1
@@ -230,12 +264,12 @@ class filtroParticulas():
                 particula.sensorDIST_center_endpointright_y = 2*self.y_offset/self.map_scale_factor - 1
 
             if leftDIST <= acceptable_limit:
-                particula.sensorDIST_left_endpointleft_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_left_endpointleft_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_left_endpointcenter_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori))
-                particula.sensorDIST_left_endpointcenter_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori))
-                particula.sensorDIST_left_endpointright_x = particula.sensorDIST_left_posx + leftDIST*cos(radians(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture))
-                particula.sensorDIST_left_endpointright_y = particula.sensorDIST_left_posy - leftDIST*sin(radians(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture))
+                particula.sensorDIST_left_endpointleft_x = particula.sensorDIST_left_posx + leftDIST*cos(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_left_endpointleft_y = particula.sensorDIST_left_posy - leftDIST*sin(particula.ori + particula.sensorDIST_left_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_left_endpointcenter_x = particula.sensorDIST_left_posx + leftDIST*cos(particula.ori + particula.sensorDIST_left_ori)
+                particula.sensorDIST_left_endpointcenter_y = particula.sensorDIST_left_posy - leftDIST*sin(particula.ori + particula.sensorDIST_left_ori)
+                particula.sensorDIST_left_endpointright_x = particula.sensorDIST_left_posx + leftDIST*cos(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture)
+                particula.sensorDIST_left_endpointright_y = particula.sensorDIST_left_posy - leftDIST*sin(particula.ori + particula.sensorDIST_left_ori - particula.sensorDIST_apparture)
             else:
                 particula.sensorDIST_left_endpointleft_x = 2*self.x_offset/self.map_scale_factor - 1
                 particula.sensorDIST_left_endpointleft_y = 2*self.y_offset/self.map_scale_factor - 1
@@ -245,12 +279,12 @@ class filtroParticulas():
                 particula.sensorDIST_left_endpointright_y = 2*self.y_offset/self.map_scale_factor - 1
 
             if rightDIST <= acceptable_limit:
-                particula.sensorDIST_right_endpointleft_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_right_endpointleft_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_right_endpointcenter_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori))
-                particula.sensorDIST_right_endpointcenter_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori))
-                particula.sensorDIST_right_endpointright_x = particula.sensorDIST_right_posx + rightDIST*cos(radians(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture))
-                particula.sensorDIST_right_endpointright_y = particula.sensorDIST_right_posy - rightDIST*sin(radians(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture))
+                particula.sensorDIST_right_endpointleft_x = particula.sensorDIST_right_posx + rightDIST*cos(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_right_endpointleft_y = particula.sensorDIST_right_posy - rightDIST*sin(particula.ori + particula.sensorDIST_right_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_right_endpointcenter_x = particula.sensorDIST_right_posx + rightDIST*cos(particula.ori + particula.sensorDIST_right_ori)
+                particula.sensorDIST_right_endpointcenter_y = particula.sensorDIST_right_posy - rightDIST*sin(particula.ori + particula.sensorDIST_right_ori)
+                particula.sensorDIST_right_endpointright_x = particula.sensorDIST_right_posx + rightDIST*cos(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture)
+                particula.sensorDIST_right_endpointright_y = particula.sensorDIST_right_posy - rightDIST*sin(particula.ori + particula.sensorDIST_right_ori - particula.sensorDIST_apparture)
             else:
                 particula.sensorDIST_right_endpointleft_x = 2*self.x_offset/self.map_scale_factor - 1
                 particula.sensorDIST_right_endpointleft_y = 2*self.y_offset/self.map_scale_factor - 1
@@ -260,12 +294,12 @@ class filtroParticulas():
                 particula.sensorDIST_right_endpointright_y = 2*self.y_offset/self.map_scale_factor - 1
             
             if backDIST <= acceptable_limit:
-                particula.sensorDIST_back_endpointleft_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_back_endpointleft_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture))
-                particula.sensorDIST_back_endpointcenter_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori))
-                particula.sensorDIST_back_endpointcenter_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori))
-                particula.sensorDIST_back_endpointright_x = particula.sensorDIST_back_posx + backDIST*cos(radians(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture))
-                particula.sensorDIST_back_endpointright_y = particula.sensorDIST_back_posy - backDIST*sin(radians(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture))
+                particula.sensorDIST_back_endpointleft_x = particula.sensorDIST_back_posx + backDIST*cos(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_back_endpointleft_y = particula.sensorDIST_back_posy - backDIST*sin(particula.ori + particula.sensorDIST_back_ori + particula.sensorDIST_apparture)
+                particula.sensorDIST_back_endpointcenter_x = particula.sensorDIST_back_posx + backDIST*cos(particula.ori + particula.sensorDIST_back_ori)
+                particula.sensorDIST_back_endpointcenter_y = particula.sensorDIST_back_posy - backDIST*sin(particula.ori + particula.sensorDIST_back_ori)
+                particula.sensorDIST_back_endpointright_x = particula.sensorDIST_back_posx + backDIST*cos(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture)
+                particula.sensorDIST_back_endpointright_y = particula.sensorDIST_back_posy - backDIST*sin(particula.ori + particula.sensorDIST_back_ori - particula.sensorDIST_apparture)
             else:
                 particula.sensorDIST_back_endpointleft_x = 2*self.x_offset/self.map_scale_factor - 1
                 particula.sensorDIST_back_endpointleft_y = 2*self.y_offset/self.map_scale_factor - 1
@@ -452,11 +486,17 @@ class filtroParticulas():
         x = 0
         y = 0
         ori = 0
+        orix = 0
+        oriy = 0
         peso_temp = 0
         for i,particula in enumerate(self.particulas):
             peso_temp = self.norm_weights[i]
             x += particula.x * peso_temp
             y += particula.y * peso_temp
-            ori += particula.ori * peso_temp
+            orix += cos(particula.ori)
+            oriy += sin(particula.ori)
+            ori += atan2(oriy,orix) * peso_temp
+            # ori += particula.ori * peso_temp
+        print(oriy)
         
         return (x,y,ori)

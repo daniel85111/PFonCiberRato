@@ -81,7 +81,7 @@ class MyRob(CRobLinkAngs):
                 self.y = self.measures.y
             
             if self.measures.compassReady:
-                self.ori= self.measures.compass
+                self.ori= radians(self.measures.compass)
             
             if self.measures.endLed:
                 print(self.rob_name + " exiting")
@@ -287,11 +287,11 @@ class MyRob(CRobLinkAngs):
             
         # pos
         lin = (out_l + out_r) / 2
-        x = self.x_od_pos + 2*(lin * cos(radians(self.ori)))
-        y = self.y_od_pos + 2*(lin * sin(radians(self.ori)))
+        x = self.x_od_pos + 2*(lin * cos(self.ori))
+        y = self.y_od_pos + 2*(lin * sin(self.ori))
         
         rot = (out_r - out_l) / self.robot_diameter         # self.robot_diameter = 1 
-        self.ori = degrees(radians(self.ori) + rot) % 360
+        self.ori = (self.ori + rot)  % 6.28318530
 
         #print(f'x0: {x:.2f}    y0: {y:.2f}    theta0: {self.ori}' )
 
@@ -353,5 +353,7 @@ if __name__ == '__main__':
     if mapc != None:
         rob.setMap(mapc.labMap)
         rob.printMap()
-    
+
+    for i,v in enumerate(IRangles):
+        IRangles[i] = radians(v)
     rob.run(IRangles)
