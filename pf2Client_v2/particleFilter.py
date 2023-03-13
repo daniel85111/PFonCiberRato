@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 from math import *
 from lxml import etree
 import random
+from sklearn.cluster import DBSCAN
+from sklearn.cluster import MeanShift
 
 class particula():
     def __init__(self, x, y, ori, w, IRangles):
@@ -79,6 +81,8 @@ class particula():
 
 class filtroParticulas():
     def __init__(self, map, IRangles, n_part=4000):
+        self.bandwidth = 2
+        self.centroides = None
         self.IRangles = IRangles
         
         self.n_part = n_part
@@ -102,10 +106,10 @@ class filtroParticulas():
 
         for i in range (self.n_part):
             # Orientacao random
-            # self.particulas.append( particula( random.random() * (self.mapmax_x), random.random() * (self.mapmax_y), random.random()*360, 1, self.IRangles))
+            # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles)
+            
 
             # Orientacao 0
-            # self.particulas.append( particula( random.random() * (self.mapmax_x), random.random() * (self.mapmax_y), 0, 1, self.IRangles))
             self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles)
 
 
@@ -122,7 +126,8 @@ class filtroParticulas():
             self.motors = (-self.last_motors[0],-self.last_motors[1])
         else:
             self.motors = motors
-        noite_multiplier = 3
+
+        noite_multiplier = 5
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -497,6 +502,25 @@ class filtroParticulas():
             oriy += sin(particula.ori)
             ori += atan2(oriy,orix) * peso_temp
             # ori += particula.ori * peso_temp
-        print(oriy)
         
         return (x,y,ori)
+    
+    def cluster(self):
+        # Armazenar as posições X e Y de todas as partículas
+        X = np.zeros((self.n_part, 2))
+        for i in range(self.n_part):
+            X[i, 0] = self.particulas[i].x
+            X[i, 1] = self.particulas[i].y
+        
+        # Executar o clustering por meanshift
+        ms = MeanShift(bandwidth=self.bandwidth)
+        ms.fit(X)
+        
+        # Obter os rótulos das clusters e seus centróides
+        labels = ms.labels_
+        centroids = ms.cluster_centers_
+        self.centroides = centroids
+        # Atualizar as posições X e Y das partículas para os centróides das clusters correspondentes
+        # for i in range(self.n_part):
+            # self.particulas[i].x = centroids[labels[i], 0]
+            # self.particulas[i].y = centroids[labels[i], 1]
