@@ -65,6 +65,9 @@ class MyRob(CRobLinkAngs):
         self.filer_runmode = 1
         self.cluster = 0
 
+        # ENDPOINTS number
+        self.num_endpoints = 3
+
         # Mapa
         self.mapa = processmap.map(lab_directory="../Labs/2223-pf/C2-lab.xml")
 
@@ -73,9 +76,9 @@ class MyRob(CRobLinkAngs):
         self.visualizer.drawMap(self.mapa)
 
         # Particle filter
-        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, n_part=3000)
+        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, self.num_endpoints, n_part=1000)
         self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-        self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles)
+        self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
         self.visualizer.showImg()
 
     # define a function to get input from the keyboard and put it into a queue
@@ -209,20 +212,20 @@ class MyRob(CRobLinkAngs):
                 self.filtro_particulas.weights_calculation(self.LINEsens, self.DISTsens, weight_calculation_method)  # Calcular pesos de cada particula
             end = time.perf_counter()
             time_weight_calculation = 1000*(end-start)
-            start = time.perf_counter()
-            self.visualizer.drawMap(self.mapa)
-            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-            
 
-            self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles)
-            end = time.perf_counter()
-            time_drawing = 1000*(end-start)
 
             start = time.perf_counter()
             if self.filer_runmode == 1:
                 self.filtro_particulas.weights_normalization()            # Normalizar peso de cada particula            
             end = time.perf_counter()
             time_weight_normalization = 1000*(end-start)
+
+            start = time.perf_counter()
+            self.visualizer.drawMap(self.mapa)
+            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+            self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles, self.num_endpoints)
+            end = time.perf_counter()
+            time_drawing = 1000*(end-start)
 
             final_pose = self.filtro_particulas.getFinalPose()
             self.visualizer.drawFinalPose(final_pose)
@@ -330,30 +333,30 @@ class MyRob(CRobLinkAngs):
             
             if self.keyboard_variable == "Key.up":
                 self.keyboard_variable = ""
-                if self.motors[0]<0.15:
+                if self.motors[0]<0.13:
                     lpow += 0.01
-                if self.motors[1]<0.15:
+                if self.motors[1]<0.13:
                     rpow += 0.01
             
             if self.keyboard_variable == "Key.down":
                 self.keyboard_variable = ""
-                if self.motors[0]>-0.15:
+                if self.motors[0]>-0.13:
                     lpow -= 0.01
-                if self.motors[1]>-0.15:
+                if self.motors[1]>-0.13:
                     rpow -= 0.01
             
             if self.keyboard_variable == "Key.left":
                 self.keyboard_variable = ""
-                if self.motors[0]>-0.15:
+                if self.motors[0]>-0.13:
                     lpow -= 0.01
-                if self.motors[1]<0.15:
+                if self.motors[1]<0.13:
                     rpow += 0.01
 
             if self.keyboard_variable == "Key.right":
                 self.keyboard_variable = ""
-                if self.motors[0]<0.15:
+                if self.motors[0]<0.13:
                     lpow += 0.01
-                if self.motors[1]>-0.15:
+                if self.motors[1]>-0.13:
                     rpow -= 0.01
 
             self.motors = (lpow, rpow)

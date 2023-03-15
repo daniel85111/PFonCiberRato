@@ -8,17 +8,31 @@ from sklearn.cluster import DBSCAN
 from sklearn.cluster import MeanShift
 
 class particula():
-    def __init__(self, x, y, ori, w, IRangles):
+    def __init__(self, x, y, ori, w, IRangles, num_endpoints):
         self.x = x
         self.y = y
         self.ori = ori
         self.weight = w
+        self.num_endpoints = num_endpoints
         
         # Sensores de distnacia
-        self.sensorDIST_apparture = radians(30)
 
+        self.sensorDIST_apparture = radians(30)
+        self.endpoints_angle = (2*self.sensorDIST_apparture)/(self.num_endpoints-1)
+        self.endpoints = np.empty([len(IRangles),self.num_endpoints,2])
+        self.sensorDIST = np.array([[angle, self.x + 0.5*cos(ori+angle), self.y - 0.5*sin(ori+angle)] for i, angle in enumerate(IRangles)])
+        # self.sensorDIST = [[angle, (self.x + 0.5*cos(ori+angle), self.y - 0.5*sin(ori+angle)), []] for i, angle in enumerate(IRangles)]
+        # self.sensorDIST = []
+        # for i in range(len(IRangles)):
+        #     info = []
+        #     info.append(IRangles[i])
+        #     info.append((self.x + 0.5*cos(ori+IRangles[i]), self.y - 0.5*sin(ori+IRangles[i])))
+        #     info.append([])
+        #     self.sensorDIST.append(info)
+        # print(self.sensorDIST[0][1][0])
         self.sensorDIST_center_ori = IRangles[0]
         self.sensorDIST_center_posx = self.x + 0.5*cos(ori+self.sensorDIST_center_ori)
+        # print(self.sensorDIST_center_posx)
         self.sensorDIST_center_posy = self.y - 0.5*sin(ori+self.sensorDIST_center_ori)
         self.sensorDIST_center_endpointleft_x = None
         self.sensorDIST_center_endpointleft_y = None
@@ -80,11 +94,11 @@ class particula():
         # self.sensor_R3_posy = self.sensor_center_posy + 1*0.08*sin(radians(ori+90))
 
 class filtroParticulas():
-    def __init__(self, map, IRangles, n_part=4000):
-        self.bandwidth = 2
+    def __init__(self, map, IRangles, num_endpoints, n_part=4000):
+        self.bandwidth = None
         self.centroides = None
         self.IRangles = IRangles
-        
+        self.num_endpoints = num_endpoints
         self.n_part = n_part
         self.sum_weights = n_part
         self.max_w = 1
@@ -106,11 +120,11 @@ class filtroParticulas():
 
         for i in range (self.n_part):
             # Orientacao random
-            # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles)
+            # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles,self.num_endpoints)
             
 
             # Orientacao 0
-            self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles)
+            self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles, self.num_endpoints)
 
 
             #self.particulas.append((random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
@@ -243,7 +257,7 @@ class filtroParticulas():
             newParticles = np.empty(self.n_part, dtype=particula)
             for i, v in enumerate(indices):
                 # newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
-                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles)
+                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles, self.num_endpoints)
                 newParticles[i].weight = 1
 
             self.particulas = newParticles
@@ -312,7 +326,7 @@ class filtroParticulas():
                 particula.sensorDIST_back_endpointcenter_y = 2*self.y_offset/self.map_scale_factor - 1
                 particula.sensorDIST_back_endpointright_x = 2*self.x_offset/self.map_scale_factor - 1
                 particula.sensorDIST_back_endpointright_y = 2*self.y_offset/self.map_scale_factor - 1
-
+        
 
     def weights_calculation(self, LINEsens, DISTsens, metodo):
         # left1,left2,left3,center,right3,right2,right1 = LINEsens
@@ -358,6 +372,33 @@ class filtroParticulas():
                 # particula.weight +=  ( exp(-centerDIFF) + exp(-leftDIFF) + exp(-rightDIFF) + exp(-backDIFF))
                 if particula.weight > self.max_w: self.max_w = particula.weight
 
+        # Metodo 2v2
+        elif metodo == 4:
+            acceptable_limit = 3            #IMPORTANTE
+            for i,particula in enumerate(self.particulas): 
+                pesosSENS = []
+                for j,v in enumerate(particula.sensorDIST):
+                    leitura = DISTsens[j]
+                    value = 1000
+                    pesosDIST = []
+                    if leitura <= acceptable_limit:
+                        for k in range(particula.num_endpoints):
+                            angle = particula.endpoints_angle*k
+                            posx = particula.sensorDIST[j][1] + leitura*cos(particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+                            posy = particula.sensorDIST[j][2] - leitura*sin(particula.ori +  particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+
+                            idx = int(self.x_offset+self.map_scale_factor*posx)
+                            idy = int(self.y_offset+self.map_scale_factor*posy)
+                            distancemap_value = self.distance_map_full[idy,idx]
+                            pesosDIST.append(distancemap_value)
+                        # print(pesosDIST)
+                        value = min(pesosDIST)**2
+
+                    pesosSENS.append(value)
+                # if i == 3: 
+                #     print(pesosSENS)
+                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
+        
         # Metodo 2
         elif metodo == 2:
             self.calculateDistanceEndpoints(DISTsens) # Ativar para metodo 2 (Apenas esta função gasta +20 ms)
@@ -464,6 +505,7 @@ class filtroParticulas():
                 dummy2 = (DISTsens_min - distmappartvalue)**2
                 particula.weight +=  (exp(-dummy2))
                 if particula.weight > self.max_w: self.max_w = particula.weight
+        
                 
 
     # Normalize the weights      
@@ -505,22 +547,38 @@ class filtroParticulas():
         
         return (x,y,ori)
     
+    # def cluster(self):
+    #     # Armazenar as posições X e Y de todas as partículas
+    #     X = np.zeros((self.n_part, 2))
+    #     for i in range(self.n_part):
+    #         X[i, 0] = self.particulas[i].x
+    #         X[i, 1] = self.particulas[i].y
+
+    #     # Executar o clustering por meanshift
+    #     ms = MeanShift(bandwidth=self.bandwidth)
+    #     ms.fit(X)
+        
+    #     # Obter os rótulos das clusters e seus centróides
+    #     labels = ms.labels_
+    #     centroids = ms.cluster_centers_
+    #     self.centroides = centroids
+    #     # Atualizar as posições X e Y das partículas para os centróides das clusters correspondentes
+    #     # for i in range(self.n_part):
+    #         # self.particulas[i].x = centroids[labels[i], 0]
+    #         # self.particulas[i].y = centroids[labels[i], 1]
+    
     def cluster(self):
+        print(f'{self.particulas[2].endpoints[0][1]}')
         # Armazenar as posições X e Y de todas as partículas
-        X = np.zeros((self.n_part, 2))
-        for i in range(self.n_part):
-            X[i, 0] = self.particulas[i].x
-            X[i, 1] = self.particulas[i].y
-        
+        X = np.array([[p.x, p.y] for p in self.particulas])
+
         # Executar o clustering por meanshift
-        ms = MeanShift(bandwidth=self.bandwidth)
+        # ms = MeanShift(bandwidth=self.bandwidth, bin_seeding=True, n_jobs=-1)
+        ms = DBSCAN(eps=1, metric='l1', algorithm='auto', leaf_size=30)
         ms.fit(X)
-        
+
         # Obter os rótulos das clusters e seus centróides
         labels = ms.labels_
-        centroids = ms.cluster_centers_
+        print(np.max(labels))
+        centroids = None
         self.centroides = centroids
-        # Atualizar as posições X e Y das partículas para os centróides das clusters correspondentes
-        # for i in range(self.n_part):
-            # self.particulas[i].x = centroids[labels[i], 0]
-            # self.particulas[i].y = centroids[labels[i], 1]

@@ -10,8 +10,8 @@ for i in range(len(centers)):
     cluster = np.random.randn(100, 2) + centers[i]
     X = np.vstack((X, cluster))
 
-# Instanciando um objeto DBSCAN com eps=0.25 e min_samples=5
-dbscan = DBSCAN(eps=0.25, min_samples=5)
+# Instanciando um objeto DBSCAN com eps=0.25
+dbscan = DBSCAN(eps=0.3)
 
 # Executando o algoritmo DBSCAN no conjunto de dados
 dbscan.fit(X)
