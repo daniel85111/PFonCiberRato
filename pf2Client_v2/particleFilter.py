@@ -107,7 +107,8 @@ class filtroParticulas():
         self.sum_squarednormalized_weights = 0
         # self.particulas = []
         self.particulas = np.empty(self.n_part, dtype=particula)
-        self.norm_weights = []
+        self.norm_weights = np.ones(self.n_part)
+
 
         self.map_scale_factor = map.scale
         self.distance_map_full = map.getDistanceMap()
@@ -117,21 +118,24 @@ class filtroParticulas():
         self.x_offset = self.map_scale_factor*self.mapmax_x
         self.y_offset = self.map_scale_factor*self.mapmax_y
 
-
+        self.createNewParticleSet()
+        
+    def createNewParticleSet(self):
         for i in range (self.n_part):
             # Orientacao random
-            # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles,self.num_endpoints)
+            self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles,self.num_endpoints)
             
 
             # Orientacao 0
-            self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles, self.num_endpoints)
+            # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles, self.num_endpoints)
 
 
             #self.particulas.append((random.random() * ((mapmax_x-1)+0.5), random.random() * (mapmax_y-1)+0.5, random.random()*360 - 180, 1))
             #self.particulas.append((5, 8, 0))
             
             #self.weights.append(1)
-            self.norm_weights.append(1/self.n_part)
+            # self.norm_weights[i] = 1/self.n_part
+            # self.norm_weights.append(1/self.n_part)
             #self.ori.append(self.particulas[i][-1])
             #self.ori.append(0)
 
@@ -141,14 +145,15 @@ class filtroParticulas():
         else:
             self.motors = motors
 
-        noite_multiplier = 5
+        noise_multiplier = 8
+
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, noite_multiplier*motors_noise*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, noite_multiplier*motors_noise*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, noise_multiplier*motors_noise*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, noise_multiplier*motors_noise*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -257,8 +262,7 @@ class filtroParticulas():
             newParticles = np.empty(self.n_part, dtype=particula)
             for i, v in enumerate(indices):
                 # newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
-                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles, self.num_endpoints)
-                newParticles[i].weight = 1
+                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, 1, self.IRangles, self.num_endpoints)
 
             self.particulas = newParticles
     
@@ -372,32 +376,7 @@ class filtroParticulas():
                 # particula.weight +=  ( exp(-centerDIFF) + exp(-leftDIFF) + exp(-rightDIFF) + exp(-backDIFF))
                 if particula.weight > self.max_w: self.max_w = particula.weight
 
-        # Metodo 2v2
-        elif metodo == 4:
-            acceptable_limit = 3            #IMPORTANTE
-            for i,particula in enumerate(self.particulas): 
-                pesosSENS = []
-                for j,v in enumerate(particula.sensorDIST):
-                    leitura = DISTsens[j]
-                    value = 1000
-                    pesosDIST = []
-                    if leitura <= acceptable_limit:
-                        for k in range(particula.num_endpoints):
-                            angle = particula.endpoints_angle*k
-                            posx = particula.sensorDIST[j][1] + leitura*cos(particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
-                            posy = particula.sensorDIST[j][2] - leitura*sin(particula.ori +  particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
 
-                            idx = int(self.x_offset+self.map_scale_factor*posx)
-                            idy = int(self.y_offset+self.map_scale_factor*posy)
-                            distancemap_value = self.distance_map_full[idy,idx]
-                            pesosDIST.append(distancemap_value)
-                        # print(pesosDIST)
-                        value = min(pesosDIST)**2
-
-                    pesosSENS.append(value)
-                # if i == 3: 
-                #     print(pesosSENS)
-                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
         
         # Metodo 2
         elif metodo == 2:
@@ -506,6 +485,73 @@ class filtroParticulas():
                 particula.weight +=  (exp(-dummy2))
                 if particula.weight > self.max_w: self.max_w = particula.weight
         
+        # Metodo 4 (= Metodo 2, versão 2)
+        elif metodo == 4:
+            acceptable_limit = 3            #IMPORTANTE
+            for i,particula in enumerate(self.particulas): 
+                pesosSENS = []
+                for j,v in enumerate(particula.sensorDIST):
+                    leitura = DISTsens[j]
+                    value = 1000
+                    pesosDIST = []
+                    if leitura <= acceptable_limit:
+                        for k in range(particula.num_endpoints):
+                            angle = particula.endpoints_angle*k
+                            posx = particula.sensorDIST[j][1] + leitura*cos(particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+                            posy = particula.sensorDIST[j][2] - leitura*sin(particula.ori +  particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+
+                            idx = int(self.x_offset+self.map_scale_factor*posx)
+                            idy = int(self.y_offset+self.map_scale_factor*posy)
+                            distancemap_value = self.distance_map_full[idy,idx]
+                            pesosDIST.append(distancemap_value)
+                        # print(pesosDIST)
+                        value = min(pesosDIST)**2
+
+                    pesosSENS.append(value)
+                # if i == 3: 
+                #     print(pesosSENS)
+                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
+                if particula.weight > self.max_w: self.max_w = particula.weight
+
+        # Metodo 5 (TENHO DE PASSAR PARA NUMPY)
+        elif metodo == 5: # (Metodo 5 = Metodo 4 + Metodo 3)
+            raio_robot = 0.5                # Metodo 2: info
+            acceptable_limit = 3            # Metodo 4: IMPORTANTE
+            for i,particula in enumerate(self.particulas): 
+                # Metodo 3
+                DISTsens_min = min(DISTsens) + raio_robot
+                # print(DISTsens_min)
+                distmappartvalue = self.distance_map_full[
+                    self.y_offset + int(self.map_scale_factor*particula.y),
+                    self.x_offset + int(self.map_scale_factor*particula.x)
+                ]
+                # print(distmappartvalue)
+                dummy2 = (DISTsens_min - distmappartvalue)**2
+                particula.weight +=  (exp(-dummy2))
+                # Metodo 4
+                pesosSENS = []
+                for j,v in enumerate(particula.sensorDIST):
+                    leitura = DISTsens[j]
+                    value = 1000
+                    pesosDIST = []
+                    if leitura <= acceptable_limit:
+                        for k in range(particula.num_endpoints):
+                            angle = particula.endpoints_angle*k
+                            posx = particula.sensorDIST[j][1] + leitura*cos(particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+                            posy = particula.sensorDIST[j][2] - leitura*sin(particula.ori +  particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+
+                            idx = int(self.x_offset+self.map_scale_factor*posx)
+                            idy = int(self.y_offset+self.map_scale_factor*posy)
+                            distancemap_value = self.distance_map_full[idy,idx]
+                            pesosDIST.append(distancemap_value)
+                        # print(pesosDIST)
+                        value = min(pesosDIST)**2
+
+                    pesosSENS.append(value)
+                # if i == 3: 
+                #     print(pesosSENS)
+                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
+                if particula.weight > self.max_w: self.max_w = particula.weight
                 
 
     # Normalize the weights      
@@ -524,11 +570,12 @@ class filtroParticulas():
             normalized_weight = particula.weight/self.sum_weights
             self.norm_weights[i] = normalized_weight
 
-            sum_squarednormalized_weights += self.norm_weights[i]**2      # sum(norm_weight[i]^2)
+            sum_squarednormalized_weights += normalized_weight**2      # sum(norm_weight[i]^2)
 
         # Store the sum of all squared normalized weights
         self.sum_squarednormalized_weights = sum_squarednormalized_weights
 
+    # Obter posiçao final como resultado das particulas e dos seus pesos
     def getFinalPose(self):
         x = 0
         y = 0
@@ -568,7 +615,6 @@ class filtroParticulas():
     #         # self.particulas[i].y = centroids[labels[i], 1]
     
     def cluster(self):
-        print(f'{self.particulas[2].endpoints[0][1]}')
         # Armazenar as posições X e Y de todas as partículas
         X = np.array([[p.x, p.y] for p in self.particulas])
 
@@ -579,6 +625,7 @@ class filtroParticulas():
 
         # Obter os rótulos das clusters e seus centróides
         labels = ms.labels_
-        print(np.max(labels))
+
+        # print(np.max(labels))
         centroids = None
         self.centroides = centroids

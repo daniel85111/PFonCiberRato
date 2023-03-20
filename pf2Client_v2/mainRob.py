@@ -49,6 +49,10 @@ class MyRob(CRobLinkAngs):
 
         self.rotation = 0
 
+        # FILTRO de PARTICULAS
+        self.n_part = 3000  # Numero de particulas desejado no filtro 
+        self.wcm = 5        # Weight calculation method
+
         # define a variable to be updated by the thread
         self.keyboard_variable = ""
 
@@ -62,7 +66,12 @@ class MyRob(CRobLinkAngs):
 
         self.autorun = True
         self.last_runmode = 0
-        self.filer_runmode = 1
+        self.filter_runmode = 1
+        self.key_up = False
+        self.key_down = False
+        self.key_left = False
+        self.key_right = False
+        self.filter_startover = False
         self.cluster = 0
 
         # ENDPOINTS number
@@ -76,7 +85,9 @@ class MyRob(CRobLinkAngs):
         self.visualizer.drawMap(self.mapa)
 
         # Particle filter
-        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, self.num_endpoints, n_part=1000)
+        self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, self.num_endpoints, self.n_part)
+
+
         self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
         self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
         self.visualizer.showImg()
@@ -180,46 +191,89 @@ class MyRob(CRobLinkAngs):
                 self.posy = self.measures.y - self.initialy           # Coordenada Y em relação à posição inicial + Offset
             
             self.odometry_move_robot(self.motors)                                 # Movimento do robot calculado por odometria
-            self.update_particle_filter(IRangles, state,  weight_calculation_method = 2)    # Atualizar filtro de particulas
+            self.check_keyboard()
+            self.update_particle_filter(IRangles, state,  weight_calculation_method = self.wcm)    # Atualizar filtro de particulas
             
+    # Verificar todos os ciclos se a ultima tecla é responsavel por alterar variaveis de controlo
+    # Espaço - Condução (Automática/manual)
+    def check_keyboard(self):
 
+        if self.keyboard_variable == "Key.space":
+            if self.autorun:
+                self.autorun = False
+            else:
+                self.autorun = True
+            self.keyboard_variable = ""
+        
+        if self.keyboard_variable == "r":
+            self.keyboard_variable = ""  
+            self.filter_startover = True
 
+        if self.keyboard_variable == "f":
+            self.keyboard_variable = ""     
+            if self.filter_runmode == 0:
+                self.filter_runmode = 1
+            else:
+                self.filter_runmode = 0
+        
+        if not self.autorun:
+            if self.keyboard_variable == "Key.up":
+                self.key_up = True
+                self.keyboard_variable = ""
 
-    def update_particle_filter(self, IRangles, state, weight_calculation_method = 3):
+            if self.keyboard_variable == "Key.down":
+                self.keyboard_variable = ""
+                self.key_down = True
+            
+            if self.keyboard_variable == "Key.left":
+                self.keyboard_variable = ""
+                self.key_left = True
+                
+            if self.keyboard_variable == "Key.right":
+                self.keyboard_variable = ""
+                self.key_right = True
+
+    # Função responsável por atualizar ao filtro de particulas todos os ciclos
+    def update_particle_filter(self, IRangles, state, weight_calculation_method = 2):
         time_move_particles = 0
         time_weight_calculation = 0
         time_weight_normalization = 0
         time_resample = 0
         time_drawing = 0
-        if self.keyboard_variable == "f":
-            self.keyboard_variable = ""
-            if self.filer_runmode == 0:
-                self.filer_runmode = 1
-            else:
-                self.filer_runmode = 0
-
-
+        time_clustering = 0
         
+        if self.filter_startover:
+            self.filtro_particulas.createNewParticleSet()
+            self.visualizer.clearImg()
+            self.visualizer.drawMap(self.mapa)
+            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+            self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
+            self.visualizer.showImg()
+            self.filter_startover = False
+
         if(state != "stop"):
             self.visualizer.clearImg()
+            # Mover particulas
             start = time.perf_counter()
             self.filtro_particulas.odometry_move_particles(self.motors, self.motorsNoise, self.measures.collision)    # Mover particulas 
             end = time.perf_counter()
             time_move_particles = 1000*(end-start)
             
+            # Efetuamos o resample e atualizamos o peso das particulas apenas caso runmode = 1
             start = time.perf_counter()
-            if self.filer_runmode == 1:
+            if self.filter_runmode == 1:
                 self.filtro_particulas.weights_calculation(self.LINEsens, self.DISTsens, weight_calculation_method)  # Calcular pesos de cada particula
             end = time.perf_counter()
             time_weight_calculation = 1000*(end-start)
 
 
             start = time.perf_counter()
-            if self.filer_runmode == 1:
+            if self.filter_runmode == 1:
                 self.filtro_particulas.weights_normalization()            # Normalizar peso de cada particula            
             end = time.perf_counter()
             time_weight_normalization = 1000*(end-start)
 
+            # Draw
             start = time.perf_counter()
             self.visualizer.drawMap(self.mapa)
             self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
@@ -233,27 +287,26 @@ class MyRob(CRobLinkAngs):
                 self.visualizer.drawCentroides(self.filtro_particulas.centroides)
             self.visualizer.showImg()
 
-
+            # Resample
             start = time.perf_counter()
-            if self.filer_runmode == 1:
+            if self.filter_runmode == 1:
                 self.filtro_particulas.resample()      # Resample de particulas
             end = time.perf_counter()
             time_resample = 1000*(end-start)
-
-            if self.keyboard_variable == "c":
-                self.keyboard_variable = ""
-                start = time.perf_counter()
-                self.filtro_particulas.cluster()
-                end = time.perf_counter()
-                print(end-start)
+            
+            # Cluster
+            start = time.perf_counter()
+            self.filtro_particulas.cluster()
+            end = time.perf_counter()
+            time_clustering = 1000*(end-start)
 
 
 
         
-        total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_drawing
+        total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_clustering + time_drawing 
 
 
-        # print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | Image: {(time_drawing):.1f})')
+        print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
         
 
     def wander(self):
@@ -261,18 +314,17 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-        
-        if self.keyboard_variable == "Key.space":
-            if self.autorun:
-                self.autorun = False
-            else:
-                self.autorun = True
-            self.keyboard_variable = ""
 
+        #Se estiver em modo automatico
         if self.autorun:
             if self.last_runmode == 0:
                 self.last_runmode = 1
+
+            # Se nao estiver numa colisão nem num movimento de recuperação de colisão:    
+            #   Executa codigo de controlo automatico do robot
             if not self.measures.collision and self.backwards_counter < 0:
+
+                # Se estiver na proximidade de uma parede
                 if    self.measures.irSensor[center_id] > 4.0:
                     #print('Rotate left')
                     #self.driveMotors(-0.1,+0.1)
@@ -301,6 +353,7 @@ class MyRob(CRobLinkAngs):
                     self.motors = (lpow, rpow)
                     self.driveMotors(lpow,rpow)
 
+                # Se não estiver na proximidade de uma parede
                 else:
                     self.rotation = random.randint(0,1)
                     #$print('Go')
@@ -315,52 +368,63 @@ class MyRob(CRobLinkAngs):
                         lpow = 0.1
                         rpow = 0.1
                         self.motors = (lpow, rpow) 
-                        self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
+                        self.driveMotors(lpow,rpow)             # Andar com velocidade constante (L = 0.1, R = 0.1)
+            
+            # Movimento de recuperação de colisão
             else:
+
                 if self.backwards_counter < 0:
+                # Utiliza 3 ciclos de simução na recuperação de colisão
                     self.backwards_counter = 3
                 lpow = -0.1
                 rpow = -0.1
                 self.motors = (lpow, rpow) 
                 self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
                 self.backwards_counter -= 1
+    
+        #Se estiver em modo manual
         else:
             lpow, rpow = self.motors
+            manual_speed_per_click = 0.01
+            manual_speed_treshold = 0.13
+
             if self.last_runmode == 1:
                 self.last_runmode = 0
+                #Parar
                 lpow = 0.0
                 rpow = 0.0
-            
-            if self.keyboard_variable == "Key.up":
-                self.keyboard_variable = ""
-                if self.motors[0]<0.13:
-                    lpow += 0.01
-                if self.motors[1]<0.13:
-                    rpow += 0.01
-            
-            if self.keyboard_variable == "Key.down":
-                self.keyboard_variable = ""
-                if self.motors[0]>-0.13:
-                    lpow -= 0.01
-                if self.motors[1]>-0.13:
-                    rpow -= 0.01
-            
-            if self.keyboard_variable == "Key.left":
-                self.keyboard_variable = ""
-                if self.motors[0]>-0.13:
-                    lpow -= 0.01
-                if self.motors[1]<0.13:
-                    rpow += 0.01
 
-            if self.keyboard_variable == "Key.right":
-                self.keyboard_variable = ""
-                if self.motors[0]<0.13:
-                    lpow += 0.01
-                if self.motors[1]>-0.13:
-                    rpow -= 0.01
+            # Controlar manualmente o robot com as setas do teclado
+            if self.key_up:
+                if self.motors[0] < manual_speed_treshold:
+                    lpow += manual_speed_per_click
+                if self.motors[1] < manual_speed_treshold:
+                    rpow += manual_speed_per_click
+                self.key_up = not self.key_up
+            
+            if self.key_down:
+                if self.motors[0] > -manual_speed_treshold:
+                    lpow -= manual_speed_per_click
+                if self.motors[1] > -manual_speed_treshold:
+                    rpow -= manual_speed_per_click
+                self.key_down = not self.key_down
+            
+            if self.key_left:
+                if self.motors[0] > -manual_speed_treshold:
+                    lpow -= manual_speed_per_click
+                if self.motors[1] < manual_speed_treshold:
+                    rpow += manual_speed_per_click
+                self.key_left = not self.key_left
+
+            if self.key_right:
+                if self.motors[0] < manual_speed_treshold:
+                    lpow += manual_speed_per_click
+                if self.motors[1] > -manual_speed_treshold:
+                    rpow -= manual_speed_per_click
+                self.key_right = not self.key_right
 
             self.motors = (lpow, rpow)
-            self.driveMotors(lpow,rpow) #Parar
+            self.driveMotors(lpow,rpow) 
         
         self.LINEsens = list(map(int, self.measures.lineSensor))         # Linha de Sensores
 
