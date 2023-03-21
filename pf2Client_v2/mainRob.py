@@ -50,7 +50,7 @@ class MyRob(CRobLinkAngs):
         self.rotation = 0
 
         # FILTRO de PARTICULAS
-        self.n_part = 3000  # Numero de particulas desejado no filtro 
+        self.n_part = 1000  # Numero de particulas desejado no filtro 
         self.wcm = 5        # Weight calculation method
 
         # define a variable to be updated by the thread
@@ -284,7 +284,7 @@ class MyRob(CRobLinkAngs):
             final_pose = self.filtro_particulas.getFinalPose()
             self.visualizer.drawFinalPose(final_pose)
             if self.filtro_particulas.centroides is not None:
-                self.visualizer.drawCentroides(self.filtro_particulas.centroides)
+                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris)
             self.visualizer.showImg()
 
             # Resample

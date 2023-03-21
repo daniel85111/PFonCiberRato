@@ -6,6 +6,7 @@ from lxml import etree
 import random
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import MeanShift
+from scipy.spatial.distance import pdist, squareform
 
 class particula():
     def __init__(self, x, y, ori, w, IRangles, num_endpoints):
@@ -97,6 +98,8 @@ class filtroParticulas():
     def __init__(self, map, IRangles, num_endpoints, n_part=4000):
         self.bandwidth = None
         self.centroides = None
+        self.centroides_oris = None
+
         self.IRangles = IRangles
         self.num_endpoints = num_endpoints
         self.n_part = n_part
@@ -104,6 +107,7 @@ class filtroParticulas():
         self.max_w = 1
 
         self.last_motors = (0,0)
+        self.movement_counter = 0
         self.sum_squarednormalized_weights = 0
         # self.particulas = []
         self.particulas = np.empty(self.n_part, dtype=particula)
@@ -146,7 +150,7 @@ class filtroParticulas():
             self.motors = motors
 
         noise_multiplier = 8
-
+        self.movement_counter += sum(self.motors)
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -160,6 +164,7 @@ class filtroParticulas():
 
             if out_r > 0.15:
                 out_r = 0.15
+
             
             # pos
             lin = (out_l + out_r) / 2
@@ -168,7 +173,7 @@ class filtroParticulas():
 
             rot = out_r - out_l # / self.robot_diameter ( = 1 )
             ori = (particula.ori + rot) % 6.28318530
-
+            
 
             particula.x = x
             particula.y = y
@@ -243,7 +248,9 @@ class filtroParticulas():
     def resample(self):
         n = 0.999 * self.n_part
         # if (1./self.sum_squarednormalized_weights < n):
-        if True:
+        if (self.movement_counter>0.5):
+            self.movement_counter = 0
+        # if True:
             # Calculate cumulative sum of normalized weights
             cum_weights = np.cumsum(self.norm_weights)
             cum_weights = np.insert(cum_weights, 0, 0)  # Insert 0 at the beginning
@@ -492,7 +499,7 @@ class filtroParticulas():
                 pesosSENS = []
                 for j,v in enumerate(particula.sensorDIST):
                     leitura = DISTsens[j]
-                    value = 1000
+                    value = particula.weight
                     pesosDIST = []
                     if leitura <= acceptable_limit:
                         for k in range(particula.num_endpoints):
@@ -516,7 +523,7 @@ class filtroParticulas():
         # Metodo 5 (TENHO DE PASSAR PARA NUMPY)
         elif metodo == 5: # (Metodo 5 = Metodo 4 + Metodo 3)
             raio_robot = 0.5                # Metodo 2: info
-            acceptable_limit = 3            # Metodo 4: IMPORTANTE
+            acceptable_limit = 2            # Metodo 4: IMPORTANTE
             for i,particula in enumerate(self.particulas): 
                 # Metodo 3
                 DISTsens_min = min(DISTsens) + raio_robot
@@ -527,12 +534,12 @@ class filtroParticulas():
                 ]
                 # print(distmappartvalue)
                 dummy2 = (DISTsens_min - distmappartvalue)**2
-                particula.weight +=  (exp(-dummy2))
+                aumento_1 =  (exp(-dummy2))
                 # Metodo 4
                 pesosSENS = []
+                value = particula.weight
                 for j,v in enumerate(particula.sensorDIST):
                     leitura = DISTsens[j]
-                    value = 1000
                     pesosDIST = []
                     if leitura <= acceptable_limit:
                         for k in range(particula.num_endpoints):
@@ -550,8 +557,10 @@ class filtroParticulas():
                     pesosSENS.append(value)
                 # if i == 3: 
                 #     print(pesosSENS)
-                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
+                if value != particula.weight:
+                    particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3])) + aumento_1
                 if particula.weight > self.max_w: self.max_w = particula.weight
+
                 
 
     # Normalize the weights      
@@ -613,19 +622,86 @@ class filtroParticulas():
     #     # for i in range(self.n_part):
     #         # self.particulas[i].x = centroids[labels[i], 0]
     #         # self.particulas[i].y = centroids[labels[i], 1]
+
+
     
+    # def cluster(self):
+    #     # Armazenar as posições X e Y de todas as partículas
+    #     X = np.array([[p.x, p.y] for p in self.particulas])
+    #     ori = np.array([p.ori for p in self.particulas])
+    #     weight = np.array([p.weight for p in self.particulas])
+
+    #     # Executar o clustering por meanshift
+    #     # ms = MeanShift(bandwidth=self.bandwidth, bin_seeding=True, n_jobs=-1)
+    #     ms = DBSCAN(eps=1, metric='l1', algorithm='auto', leaf_size=30)
+    #     ms.fit(X)
+
+    #     # Obter os rótulos das clusters e seus centróides
+    #     labels = ms.labels_
+
+    #     # Encontrar os centroides, médias de orientação e médias de peso
+    #     centroids = []
+    #     orientations = []
+    #     weights = []
+    #     for label in np.unique(labels):
+    #         if label == -1:  # descartar pontos que não foram classificados em uma cluster
+    #             continue
+    #         mask = (labels == label)
+    #         points = X[mask]
+    #         orientations_in_cluster = ori[mask]
+    #         # weights_in_cluster = weight[mask]
+    #         centroid = points.mean(axis=0)
+
+    #         orientation = np.arctan2(np.sin(orientations_in_cluster).mean(), np.cos(orientations_in_cluster).mean())
+    #         # weight = weights_in_cluster.mean()
+    #         centroids.append(centroid)
+    #         orientations.append(orientation)
+    #         # weights.append(weight)
+
+    #     # centroids é uma lista de tuplas (x, y) com as coordenadas dos centroides
+    #     # orientations é uma lista com as médias de orientação de cada cluster
+    #     # weights é uma lista com as médias de peso de cada cluster
+
+    #     # print(np.max(labels))
+    #     self.centroides = centroids
+    #     self.centroides_oris = orientations
+
     def cluster(self):
         # Armazenar as posições X e Y de todas as partículas
+        # X = []
+        # for p in self.particulas:
+        #     X.append([p.x, p.y])
+        # X = np.vstack(X)
         X = np.array([[p.x, p.y] for p in self.particulas])
+        ori = np.array([p.ori for p in self.particulas])
 
-        # Executar o clustering por meanshift
-        # ms = MeanShift(bandwidth=self.bandwidth, bin_seeding=True, n_jobs=-1)
+        # Selecionar apenas os pontos dentro de um raio
+        D = squareform(pdist(X))
+        indices = np.where(np.any(D <= 0.1, axis=1))[0]
+        X = X[indices]
+        ori = ori[indices]
+
+        # Executar o clustering por DBSCAN
         ms = DBSCAN(eps=1, metric='l1', algorithm='auto', leaf_size=30)
         ms.fit(X)
 
         # Obter os rótulos das clusters e seus centróides
         labels = ms.labels_
 
-        # print(np.max(labels))
-        centroids = None
+        # Encontrar os centroides e as médias de orientação
+        centroids = []
+        orientations = []
+        for label in np.unique(labels):
+            if label == -1:  # descartar pontos que não foram classificados em uma cluster
+                continue
+            indices = np.where(labels == label)[0]
+            points = X[indices]
+            orientations_in_cluster = ori[indices]
+            centroid = points.mean(axis=0)
+            orientation = np.arctan2(np.sin(orientations_in_cluster).mean(), np.cos(orientations_in_cluster).mean())
+            centroids.append(centroid)
+            orientations.append(orientation)
+
         self.centroides = centroids
+        self.centroides_oris = orientations
+
