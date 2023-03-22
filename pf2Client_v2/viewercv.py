@@ -74,16 +74,21 @@ class ViewParticles():
             # cv2.circle(self.img, (x_sensor_R2,y_sensor_R2), 1, (0,0,253), -1)                 # Draw sensor Right2 
             # cv2.circle(self.img, (x_sensor_R3,y_sensor_R3), 1, (0,0,253), -1)                 # Draw sensor Right3
 
-    def drawCentroides(self, centroides, oris):
+    def drawCentroides(self, centroides, oris, weights):
          # Draws of robot elements
+        max_weight = max(weights)
         if len(centroides) < 1: return
         for i,centroide in enumerate(centroides):
+            
 
             x = int(self.imscale*centroide[0])
             y = int(self.imscale*centroide[1])
             if x == None or y == None: return
             radious = 0.25
-            cv2.circle(self.img,(int(x),int(y)), 10, (200,0,0), -1) # Circulo centrado no centro do robot real
+            if weights[i] == max_weight:
+                cv2.circle(self.img,(int(x),int(y)), 10, (0,250,255), -1) # Circulo centrado no centro do robot real
+            else:
+                cv2.circle(self.img,(int(x),int(y)), 10, (200,0,0), -1) # Circulo centrado no centro do robot real
             cv2.line( self.img, (int(x),int(y)), (int(x+radious*self.imscale*cos(oris[i])), int(y-(radious*self.imscale*sin(oris[i])))), (0,0,255),2) # Linha do centro do robot direcionada segundo orientaçao
         
 

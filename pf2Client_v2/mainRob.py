@@ -273,6 +273,12 @@ class MyRob(CRobLinkAngs):
             end = time.perf_counter()
             time_weight_normalization = 1000*(end-start)
 
+            # Cluster
+            start = time.perf_counter()
+            self.filtro_particulas.cluster()
+            end = time.perf_counter()
+            time_clustering = 1000*(end-start)
+
             # Draw
             start = time.perf_counter()
             self.visualizer.drawMap(self.mapa)
@@ -284,7 +290,7 @@ class MyRob(CRobLinkAngs):
             final_pose = self.filtro_particulas.getFinalPose()
             self.visualizer.drawFinalPose(final_pose)
             if self.filtro_particulas.centroides is not None:
-                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris)
+                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights)
             self.visualizer.showImg()
 
             # Resample
@@ -294,11 +300,7 @@ class MyRob(CRobLinkAngs):
             end = time.perf_counter()
             time_resample = 1000*(end-start)
             
-            # Cluster
-            start = time.perf_counter()
-            self.filtro_particulas.cluster()
-            end = time.perf_counter()
-            time_clustering = 1000*(end-start)
+
 
 
 
@@ -524,7 +526,7 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
-    IRangles = [0.0,75.0,-75.0,180.0]
+    IRangles = [0.0,80.0,-80.0,180.0]
     rob=MyRob(rob_name,pos,IRangles,host)
     if mapc != None:
         rob.setMap(mapc.labMap)

@@ -99,6 +99,7 @@ class filtroParticulas():
         self.bandwidth = None
         self.centroides = None
         self.centroides_oris = None
+        self.centroides_weights = None
 
         self.IRangles = IRangles
         self.num_endpoints = num_endpoints
@@ -108,8 +109,10 @@ class filtroParticulas():
 
         self.last_motors = (0,0)
         self.movement_counter = 0
+        self.movement_counter_trigger = 0.5
         self.sum_squarednormalized_weights = 0
         # self.particulas = []
+        self.noise_multiplier = 5
         self.particulas = np.empty(self.n_part, dtype=particula)
         self.norm_weights = np.ones(self.n_part)
 
@@ -149,15 +152,15 @@ class filtroParticulas():
         else:
             self.motors = motors
 
-        noise_multiplier = 8
+        noise_multiplier = 5
         self.movement_counter += sum(self.motors)
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
             out_r = (self.motors[1] + self.last_motors[1]) / 2
             
-            out_l = random.gauss(out_l, noise_multiplier*motors_noise*out_l)   # out_l tem um erro de 1,5%
-            out_r = random.gauss(out_r, noise_multiplier*motors_noise*out_r)    # out_r tem um erro de 1,5%
+            out_l = random.gauss(out_l, self.noise_multiplier*motors_noise*out_l)   # out_l tem um erro de 1,5%
+            out_r = random.gauss(out_r, self.noise_multiplier*motors_noise*out_r)    # out_r tem um erro de 1,5%
 
             if out_l > 0.15:
                 out_l = 0.15
@@ -248,7 +251,7 @@ class filtroParticulas():
     def resample(self):
         n = 0.999 * self.n_part
         # if (1./self.sum_squarednormalized_weights < n):
-        if (self.movement_counter>0.5):
+        if (self.movement_counter > self.movement_counter_trigger):
             self.movement_counter = 0
         # if True:
             # Calculate cumulative sum of normalized weights
@@ -557,8 +560,10 @@ class filtroParticulas():
                     pesosSENS.append(value)
                 # if i == 3: 
                 #     print(pesosSENS)
-                if value != particula.weight:
-                    particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3])) + aumento_1
+                particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3])) + aumento_1
+
+                # if value != particula.weight:
+                #     particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3])) + aumento_1
                 if particula.weight > self.max_w: self.max_w = particula.weight
 
                 
@@ -674,6 +679,8 @@ class filtroParticulas():
         # X = np.vstack(X)
         X = np.array([[p.x, p.y] for p in self.particulas])
         ori = np.array([p.ori for p in self.particulas])
+        weight = np.array([p.weight for p in self.particulas])
+
 
         # Selecionar apenas os pontos dentro de um raio
         D = squareform(pdist(X))
@@ -691,17 +698,22 @@ class filtroParticulas():
         # Encontrar os centroides e as médias de orientação
         centroids = []
         orientations = []
+        weights = []
         for label in np.unique(labels):
             if label == -1:  # descartar pontos que não foram classificados em uma cluster
                 continue
             indices = np.where(labels == label)[0]
             points = X[indices]
             orientations_in_cluster = ori[indices]
+            weights_in_cluster = weight[indices]
             centroid = points.mean(axis=0)
             orientation = np.arctan2(np.sin(orientations_in_cluster).mean(), np.cos(orientations_in_cluster).mean())
+            weight_mean = weights_in_cluster.mean()
+            weights.append(weight_mean)
             centroids.append(centroid)
             orientations.append(orientation)
 
         self.centroides = centroids
         self.centroides_oris = orientations
+        self.centroides_weights = weights
 
