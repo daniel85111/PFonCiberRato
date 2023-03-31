@@ -1,0 +1,12 @@
+<Lab Name="PF LAB" Height="14.00" Width="28.00">
+<Beacon X="25.00" Y="3.00" Height="2.00"/>
+<Target X="25.00" Y="3.00" Radius="2.00"/>
+<Target X="4.50" Y="11.50" Radius="2.00"/>
+<Wall Height="1.00">
+<Corner X="13.00" Y="0.00"/>
+<Corner X="13.00" Y="14.00"/>
+<Corner X="15.00" Y="14.00"/>
+<Corner X="15.00" Y="0.00"/>
+</Wall>
+
+</Lab>

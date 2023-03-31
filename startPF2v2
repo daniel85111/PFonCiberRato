@@ -1,8 +1,8 @@
 #!/bin/bash
 
 ARGS="--param ../Labs/2223-pf/C1-config.xml"
-ARGS+=" --lab ../Labs/2223-pf/C2-lab.xml"
-ARGS+=" --grid ../Labs/2223-pf/C2-grid.xml"
+ARGS+=" --lab ../Labs/2223-pf/C4d-lab.xml"
+ARGS+=" --grid ../Labs/2223-pf/C4-grid.xml"
 #ARGS+=" --scoring 1"
 ARGS+=" --gps"
 ARGS+=" --compass"

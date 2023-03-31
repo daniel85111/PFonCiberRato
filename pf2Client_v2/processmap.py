@@ -10,7 +10,7 @@ class map():
         self.mapmax_y = mapmax_y
 
         self.areas = self.calculateAreas()
-        self.map_full, self.map_cropped = self.calculateMap()
+        self.map_full, self.map_cropped, self.map_validation, self.map_validation_cropped = self.calculateMap() #Validation is solid. Used in resample
         self.distance_map_cropped, self.distance_map_full = self.calculateDistanceMap()
 
         np.savetxt('Dist MAP', self.distance_map_cropped, fmt='%2.2f', delimiter=', ')
@@ -97,11 +97,23 @@ class map():
         bottomleft = (mapstartx, mapendy)
 
         arr = np.zeros((3*mapstarty,3*mapstartx,1), np.uint8)
+        arr_solid = np.zeros((3*mapstarty,3*mapstartx,1), np.uint8)
+
 
         cv2.line(arr, (topleft), (topright),255,1)
         cv2.line(arr, (topright), (bottomright),255,1)
         cv2.line(arr, (bottomright), (bottomleft),255,1)       
         cv2.line(arr, (bottomleft), (topleft),255,1)
+
+        cv2.rectangle(arr_solid,(0,0),(topleft),255,-1)
+        cv2.rectangle(arr_solid,(mapstartx,0),(topright),255,-1)
+        cv2.rectangle(arr_solid,(mapendx,0),(3*mapstartx,mapstarty),255,-1)
+        cv2.rectangle(arr_solid,(0,mapstarty),(bottomleft),255,-1)
+        cv2.rectangle(arr_solid,(topright),(3*mapstartx,mapendy),255,-1)
+        cv2.rectangle(arr_solid,(0,mapendy),(mapstartx,3*mapstarty),255,-1)
+        cv2.rectangle(arr_solid,(bottomleft),(mapendx,3*mapstarty),255,-1)
+        cv2.rectangle(arr_solid,(bottomright),(3*mapstartx,3*mapstarty),255,-1)
+
         
         for i,v in enumerate(self.areas): # v[0][0] = xmin v[0][1] = ymin
             # print(f'i = {i}\t v= {v}')
@@ -120,17 +132,29 @@ class map():
             cv2.line(arr, (area_bottomright), (area_bottomleft), 255,1)
             cv2.line(arr, (area_bottomleft), (area_topleft), 255,1)
 
-        # cv2.imshow("Resized image", arr)
+            cv2.rectangle(arr_solid,(area_topleft),(area_bottomright),255,-1)
+
+        # cv2.imshow("Resized image", arr_solid)
         # cv2.waitKey(0)  
-        # plt.imshow(arr)
+        # plt.imshow(arr_solid)
         # plt.show() 
        
         cropped = arr[mapstarty:mapendy+1, mapstartx:mapendx+1]
+        cropped_solid = arr_solid[mapstarty:mapendy+1, mapstartx:mapendx+1]
+
         # cv2.imshow("Resized image", cropped)
-        # cv2.waitKey(0) ^
-        # plt.imshow(cropped)
+        # cv2.waitKey(0)
+        # plt.imshow(cropped_solid)
         # plt.show() 
-        return arr,cropped
+
+        return arr,cropped,arr_solid,cropped_solid
+    
+    def isValidLocation(self,x,y):
+        if self.map_cropped[x][y] == 255: 
+            return False
+        else: 
+            return True
+
 
     def calculateDistanceMap(self):
         cropped = self.map_cropped

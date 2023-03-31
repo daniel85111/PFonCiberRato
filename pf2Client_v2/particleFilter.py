@@ -100,23 +100,24 @@ class filtroParticulas():
         self.centroides = None
         self.centroides_oris = None
         self.centroides_weights = None
+        self.centroides_cov = None
 
         self.IRangles = IRangles
         self.num_endpoints = num_endpoints
-        self.n_part = n_part
+        self.num_particles = n_part
         self.sum_weights = n_part
         self.max_w = 1
 
         self.last_motors = (0,0)
         self.movement_counter = 0
-        self.movement_counter_trigger = 0.5
+        self.movement_counter_trigger = 0.25
         self.sum_squarednormalized_weights = 0
         # self.particulas = []
-        self.noise_multiplier = 5
-        self.particulas = np.empty(self.n_part, dtype=particula)
-        self.norm_weights = np.ones(self.n_part)
+        self.noise_multiplier = 10
+        self.particulas = np.empty(self.num_particles, dtype=particula)
+        self.norm_weights = np.ones(self.num_particles)
 
-
+        self.map = map
         self.map_scale_factor = map.scale
         self.distance_map_full = map.getDistanceMap()
         self.mapmax_x = map.mapmax_x
@@ -128,7 +129,7 @@ class filtroParticulas():
         self.createNewParticleSet()
         
     def createNewParticleSet(self):
-        for i in range (self.n_part):
+        for i in range (self.num_particles):
             # Orientacao random
             self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, random.random()*360, 1, self.IRangles,self.num_endpoints)
             
@@ -141,8 +142,8 @@ class filtroParticulas():
             #self.particulas.append((5, 8, 0))
             
             #self.weights.append(1)
-            # self.norm_weights[i] = 1/self.n_part
-            # self.norm_weights.append(1/self.n_part)
+            # self.norm_weights[i] = 1/self.num_particles
+            # self.norm_weights.append(1/self.num_particles)
             #self.ori.append(self.particulas[i][-1])
             #self.ori.append(0)
 
@@ -153,7 +154,8 @@ class filtroParticulas():
             self.motors = motors
 
         noise_multiplier = 5
-        self.movement_counter += sum(self.motors)
+        self.movement_counter += abs(self.motors[0])+abs(self.motors[1])
+
         for i,particula in enumerate (self.particulas):
             # calculate estimated power apply
             out_l = (self.motors[0] + self.last_motors[0]) / 2
@@ -220,16 +222,16 @@ class filtroParticulas():
 
 
     # def resample(self):
-    #     n = 0.999*self.n_part
+    #     n = 0.999*self.num_particles
     #     #print(f'Resample condition: {1./self.sum_squarednormalized_weights:.2f} < {n:.2f} -----> {1./self.sum_squarednormalized_weights < n}')
     #     # if (1./self.sum_squarednormalized_weights < n):
     #     if True:
     #         # print("---------- ReSampling!!!!!- -----------")
     #         indices = []
-    #         C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.n_part)]
+    #         C = [0.] +[sum(self.norm_weights[:i+1]) for i in range(self.num_particles)]
     #         u0, j = random.random(), 0
 
-    #         for u in [(u0+i)/self.n_part for i in range(self.n_part)]:
+    #         for u in [(u0+i)/self.num_particles for i in range(self.num_particles)]:
     #             while u > C[j]:
     #                 j+=1
 
@@ -249,7 +251,7 @@ class filtroParticulas():
     # Finally, np.zeros() is used to initialize the indices array with zeros, and dtype=np.int64 is specified to make sure it has the same data type as the original indices list.
 
     def resample(self):
-        n = 0.999 * self.n_part
+        n = 0.999 * self.num_particles
         # if (1./self.sum_squarednormalized_weights < n):
         if (self.movement_counter > self.movement_counter_trigger):
             self.movement_counter = 0
@@ -260,23 +262,92 @@ class filtroParticulas():
 
             # Generate uniform random numbers and find corresponding indices
             u0, j = np.random.rand(), 0
-            u_values = [(u0 + i) / self.n_part for i in range(self.n_part)]
-            indices = np.zeros(self.n_part, dtype=np.int64)
-            for i in range(self.n_part):
+            u_values = [(u0 + i) / self.num_particles for i in range(self.num_particles)]
+            indices = np.zeros(self.num_particles, dtype=np.int64)
+            for i in range(self.num_particles): # Mudar para nao aceitar particulas em posicao invalida (dentro de parede)
                 while u_values[i] > cum_weights[j]:
                     j += 1
                 indices[i] = j - 1
 
             # Create new particles with equal weight
             # newParticles = []
-            newParticles = np.empty(self.n_part, dtype=particula)
+            newParticles = np.empty(self.num_particles, dtype=particula)
             for i, v in enumerate(indices):
                 # newParticles.append(particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, self.particulas[v].weight, self.IRangles))
                 newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, 1, self.IRangles, self.num_endpoints)
 
             self.particulas = newParticles
+        
+    def sis_resample_gpt(self):
+        n = 0.999 * self.num_particles
+        # if (1./self.sum_squarednormalized_weights < n):
+        if (self.movement_counter > self.movement_counter_trigger):
+            self.movement_counter = 0
+        # if True:
+            # Calculate cumulative sum of normalized weights
+            cum_weights = np.cumsum(self.norm_weights)
+
+            # Determine the spacing between particles
+            spacing = 1 / self.num_particles
+
+            # Generate a random offset in the range [0, spacing)
+            u0 = np.random.rand() * spacing
+
+            # Find corresponding indices using systematic resampling
+            u_values = np.arange(u0, spacing*self.num_particles, spacing)
+            j = 0
+            indices = np.zeros(self.num_particles, dtype=np.int64)
+            for i in range(self.num_particles):
+                while u_values[i] > cum_weights[j]:
+                    j += 1
+                indices[i] = j - 1
+
+            # Create new particles with equal weight
+            newParticles = np.empty(self.num_particles, dtype=particula)
+            for i, v in enumerate(indices):
+                newParticles[i] = particula(self.particulas[v].x, self.particulas[v].y, self.particulas[v].ori, 1, self.IRangles, self.num_endpoints)
+
+            self.particulas = newParticles
+
+
+    # https://github.com/iris-ua/iris_lama/blob/master/src/pf_slam2d.cpp
+    # def sistematic_resample(self):
+    def sistematic_resample(self):
+        self.num_particles
+        sample_idx = 0
+
+        interval = 1.0 / float(self.num_particles)
+
+        target = interval * random.uniform(0, 1)
+        cw = 0.0
+        n = 0
+        for i in range(self.num_particles):
+            cw += self.norm_weights[i]
+
+            while cw > target:
+                sample_idx[n] = i
+                n += 1
+                target += interval
+
+        # generate a new set of particles
+        ps = 1 - self.current_particle_set_
+        self.particles_[ps] = [None] * self.num_particles
+
+        for i in range(self.num_particles):
+            idx = sample_idx[i]
+
+            self.particles_[ps][i] = self.particles_[self.current_particle_set_][idx]
+            self.particles_[ps][i].weight = 0.0
+            self.particles_[ps][i].weight_sum = self.particles_[self.current_particle_set_][idx].weight_sum
+
+            self.particles_[ps][i].dm = DynamicDistanceMapPtr(DynamicDistanceMap(self.particles_[self.current_particle_set_][idx].dm))
+            self.particles_[ps][i].occ = FrequencyOccupancyMapPtr(FrequencyOccupancyMap(self.particles_[self.current_particle_set_][idx].occ))
+
+        self.particles_[self.current_particle_set_].clear()
+        self.current_particle_set_ = ps
+
     
-    # Para o segundo metodo de calculo dos pesos
+    # Para o segundo metodo de calculo dos pesos (APENAS 3 endpoints por sensor)
     def calculateDistanceEndpoints(self, DISTsens):
         centerDIST, leftDIST, rightDIST, backDIST = DISTsens
         acceptable_limit = 3            #IMPORTANTE
@@ -515,13 +586,42 @@ class filtroParticulas():
                             distancemap_value = self.distance_map_full[idy,idx]
                             pesosDIST.append(distancemap_value)
                         # print(pesosDIST)
-                        value = min(pesosDIST)**2
+                        # Utilizar desvio padrão para o calculo dos pesos
+                        value = 0.5*min(pesosDIST)**2
 
                     pesosSENS.append(value)
                 # if i == 3: 
                 #     print(pesosSENS)
                 particula.weight +=  exp((-pesosSENS[0]) + exp(-pesosSENS[1]) + exp(-pesosSENS[2]) + exp(-pesosSENS[3]))
                 if particula.weight > self.max_w: self.max_w = particula.weight
+
+        # if metodo == 4:
+        #     acceptable_limit = 3  # IMPORTANTE
+        #     for i, particula in enumerate(self.particulas):
+        #         pesosSENS = np.zeros(len(particula.sensorDIST))
+        #         for j, v in enumerate(particula.sensorDIST):
+        #             leitura = DISTsens[j]
+        #             value = particula.weight
+        #             pesosDIST = np.zeros(particula.num_endpoints)
+        #             if leitura <= acceptable_limit:
+        #                 for k in range(particula.num_endpoints):
+        #                     angle = particula.endpoints_angle * k
+        #                     posx = particula.sensorDIST[j][1] + leitura * np.cos(
+        #                         particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+        #                     posy = particula.sensorDIST[j][2] - leitura * np.sin(
+        #                         particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+
+        #                     idx = int(self.x_offset + self.map_scale_factor * posx)
+        #                     idy = int(self.y_offset + self.map_scale_factor * posy)
+        #                     distancemap_value = self.distance_map_full[idy, idx]
+        #                     pesosDIST[k] = distancemap_value
+        #                 value = np.min(pesosDIST) ** 2
+
+        #             pesosSENS[j] = value
+
+        #         particula.weight += np.exp((-pesosSENS[0]) + np.exp(-pesosSENS[1]) + np.exp(-pesosSENS[2]) + np.exp(-pesosSENS[3]))
+        #         if particula.weight > self.max_w:
+        #             self.max_w = particula.weight
 
         # Metodo 5 (TENHO DE PASSAR PARA NUMPY)
         elif metodo == 5: # (Metodo 5 = Metodo 4 + Metodo 3)
@@ -555,7 +655,7 @@ class filtroParticulas():
                             distancemap_value = self.distance_map_full[idy,idx]
                             pesosDIST.append(distancemap_value)
                         # print(pesosDIST)
-                        value = min(pesosDIST)**2
+                        value = 0.5*min(pesosDIST)**2
 
                     pesosSENS.append(value)
                 # if i == 3: 
@@ -610,8 +710,8 @@ class filtroParticulas():
     
     # def cluster(self):
     #     # Armazenar as posições X e Y de todas as partículas
-    #     X = np.zeros((self.n_part, 2))
-    #     for i in range(self.n_part):
+    #     X = np.zeros((self.num_particles, 2))
+    #     for i in range(self.num_particles):
     #         X[i, 0] = self.particulas[i].x
     #         X[i, 1] = self.particulas[i].y
 
@@ -624,7 +724,7 @@ class filtroParticulas():
     #     centroids = ms.cluster_centers_
     #     self.centroides = centroids
     #     # Atualizar as posições X e Y das partículas para os centróides das clusters correspondentes
-    #     # for i in range(self.n_part):
+    #     # for i in range(self.num_particles):
     #         # self.particulas[i].x = centroids[labels[i], 0]
     #         # self.particulas[i].y = centroids[labels[i], 1]
 
@@ -683,13 +783,13 @@ class filtroParticulas():
 
 
         # Selecionar apenas os pontos dentro de um raio
-        D = squareform(pdist(X))
-        indices = np.where(np.any(D <= 0.1, axis=1))[0]
-        X = X[indices]
-        ori = ori[indices]
+        # D = squareform(pdist(X))
+        # indices = np.where(np.any(D <= 0.9, axis=1))[0]
+        # X = X[indices]
+        # ori = ori[indices]
 
         # Executar o clustering por DBSCAN
-        ms = DBSCAN(eps=1, metric='l1', algorithm='auto', leaf_size=30)
+        ms = DBSCAN(eps=1, metric='l1', algorithm='auto') # default values: leaf_size=30, min_samples = 5
         ms.fit(X)
 
         # Obter os rótulos das clusters e seus centróides
@@ -699,6 +799,7 @@ class filtroParticulas():
         centroids = []
         orientations = []
         weights = []
+        covariances = []
         for label in np.unique(labels):
             if label == -1:  # descartar pontos que não foram classificados em uma cluster
                 continue
@@ -708,12 +809,17 @@ class filtroParticulas():
             weights_in_cluster = weight[indices]
             centroid = points.mean(axis=0)
             orientation = np.arctan2(np.sin(orientations_in_cluster).mean(), np.cos(orientations_in_cluster).mean())
-            weight_mean = weights_in_cluster.mean()
+            weight_mean = weights_in_cluster.sum()
+            covariance = np.cov(points, rowvar=False, bias = True)
+            covariances.append(covariance)
             weights.append(weight_mean)
             centroids.append(centroid)
             orientations.append(orientation)
-
+        print(covariances)
+        print()
+        
         self.centroides = centroids
         self.centroides_oris = orientations
         self.centroides_weights = weights
+        self.centroides_cov = covariances
 

@@ -51,7 +51,7 @@ class MyRob(CRobLinkAngs):
 
         # FILTRO de PARTICULAS
         self.n_part = 1000  # Numero de particulas desejado no filtro 
-        self.wcm = 5        # Weight calculation method
+        self.wcm = 4        # Weight calculation method
 
         # define a variable to be updated by the thread
         self.keyboard_variable = ""
@@ -75,13 +75,13 @@ class MyRob(CRobLinkAngs):
         self.cluster = 0
 
         # ENDPOINTS number
-        self.num_endpoints = 3
+        self.num_endpoints = 5
 
         # Mapa
-        self.mapa = processmap.map(lab_directory="../Labs/2223-pf/C2-lab.xml")
+        self.mapa = processmap.map(lab_directory="../Labs/2223-pf/C4d-lab.xml")
 
         # Viwer
-        self.visualizer = viewercv.ViewParticles(self.mapa, grid_directory = "../Labs/2223-pf/C2-grid.xml")
+        self.visualizer = viewercv.ViewParticles(self.mapa, grid_directory = "../Labs/2223-pf/C4-grid.xml")
         self.visualizer.drawMap(self.mapa)
 
         # Particle filter
@@ -287,8 +287,8 @@ class MyRob(CRobLinkAngs):
             end = time.perf_counter()
             time_drawing = 1000*(end-start)
 
-            final_pose = self.filtro_particulas.getFinalPose()
-            self.visualizer.drawFinalPose(final_pose)
+            # final_pose = self.filtro_particulas.getFinalPose()
+            # self.visualizer.drawFinalPose(final_pose)
             if self.filtro_particulas.centroides is not None:
                 self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights)
             self.visualizer.showImg()
@@ -296,20 +296,26 @@ class MyRob(CRobLinkAngs):
             # Resample
             start = time.perf_counter()
             if self.filter_runmode == 1:
-                self.filtro_particulas.resample()      # Resample de particulas
+                self.filtro_particulas.sis_resample_gpt()      # Resample de particulas
             end = time.perf_counter()
             time_resample = 1000*(end-start)
             
 
+        # Fazer isto dentro do particleFilter ??? (antes de resample??)
+        erro = 'Nao calculado'
+        if(self.filtro_particulas.centroides_weights) is not None:
+            weight_centroide_mais_provavel = max(self.filtro_particulas.centroides_weights)
+            idx_centroide_mais_provavel = self.filtro_particulas.centroides_weights.index(weight_centroide_mais_provavel)
+            x_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][0]
+            y_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][1]
+            ori_mp = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel]
+            erro = (x_mp-self.posx-4.5, 14-y_mp-self.posy-11.5, ori_mp-self.ori)
 
-
-
-        
         total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_clustering + time_drawing 
 
 
         print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
-        
+        print(f'Erro = x:{erro[0]:.3}, y:{erro[1]:.3}, ori:{erro[2]:.3}\n')
 
     def wander(self):
         center_id = 0
@@ -435,6 +441,9 @@ class MyRob(CRobLinkAngs):
         
         distancias = []
         for i,v in enumerate(IRsens):
+            if v == 0: 
+                distancias.append(None)
+                return
             distancias.append(1/v)
             # if v != 0.0:
             #     distancia = 1/v
@@ -526,7 +535,7 @@ for i in range(1, len(sys.argv),2):
         quit()
 
 if __name__ == '__main__':
-    IRangles = [0.0,80.0,-80.0,180.0]
+    IRangles = [0.0,75.0,-75.0,180.0]
     rob=MyRob(rob_name,pos,IRangles,host)
     if mapc != None:
         rob.setMap(mapc.labMap)
