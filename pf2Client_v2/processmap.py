@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from math import *
 from lxml import etree
 class map():
     def __init__(self, lab_directory = None, scale = 100, mapmax_x = 28, mapmax_y = 14):
@@ -144,13 +145,15 @@ class map():
 
         # cv2.imshow("Resized image", cropped)
         # cv2.waitKey(0)
-        # plt.imshow(cropped_solid)
+        # plt.imshow(arr_solid)
         # plt.show() 
 
         return arr,cropped,arr_solid,cropped_solid
     
     def isValidLocation(self,x,y):
-        if self.map_cropped[x][y] == 255: 
+        x = ceil(x)
+        y = ceil(y)
+        if self.map_validation[y][x] == 255:
             return False
         else: 
             return True

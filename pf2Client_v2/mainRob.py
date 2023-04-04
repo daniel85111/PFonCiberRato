@@ -1,5 +1,7 @@
 
 import sys
+import logging
+import datetime
 from croblink import *
 from math import *
 import xml.etree.ElementTree as ET
@@ -16,8 +18,17 @@ import threading
 import queue
 from pynput import keyboard
 
+# Simulador info
 CELLROWS=7
 CELLCOLS=14
+
+# Logs
+data_hora_atual = datetime.datetime.now()
+data_hora_formatada = data_hora_atual.strftime('%Y-%m-%d_%H-%M-%S')
+nome_arquivo = f"./pflogs/log_{data_hora_formatada}.txt"
+logging.basicConfig(filename=nome_arquivo, level=logging.DEBUG)
+
+
 
 class MyRob(CRobLinkAngs):
     def __init__(self, rob_name, rob_id, IRangles, host):
@@ -29,6 +40,9 @@ class MyRob(CRobLinkAngs):
         self.mapmax_y = 14
 
         # Movement(sensors, actuators)
+        self.movement_counter = 0
+        self.movement_counter_trigger = 0.35
+        self.resample_flag = 0
         self.backwards_counter = -1
         self.motors = (0.0,0.0)
         self.last_motors = (0.0,0.0)
@@ -51,7 +65,10 @@ class MyRob(CRobLinkAngs):
 
         # FILTRO de PARTICULAS
         self.n_part = 1000  # Numero de particulas desejado no filtro 
-        self.wcm = 4        # Weight calculation method
+        self.weight_calculation_method = 4        # Weight calculation method
+
+        # ENDPOINTS number
+        self.num_endpoints = 5
 
         # define a variable to be updated by the thread
         self.keyboard_variable = ""
@@ -74,11 +91,10 @@ class MyRob(CRobLinkAngs):
         self.filter_startover = False
         self.cluster = 0
 
-        # ENDPOINTS number
-        self.num_endpoints = 5
+
 
         # Mapa
-        self.mapa = processmap.map(lab_directory="../Labs/2223-pf/C4d-lab.xml")
+        self.mapa = processmap.map(lab_directory="../Labs/2223-pf/C2-lab.xml")
 
         # Viwer
         self.visualizer = viewercv.ViewParticles(self.mapa, grid_directory = "../Labs/2223-pf/C4-grid.xml")
@@ -91,6 +107,7 @@ class MyRob(CRobLinkAngs):
         self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
         self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
         self.visualizer.showImg()
+
 
     # define a function to get input from the keyboard and put it into a queue
     def get_input(self):
@@ -113,6 +130,7 @@ class MyRob(CRobLinkAngs):
         for l in reversed(self.labMap):
             print(''.join([str(l) for l in l]))
 
+    # -------------------------------------- Run Cycle -------------------------------------
     def run(self, IRangles):
         if self.status != 0:
             print("Connection refused or error")
@@ -175,7 +193,8 @@ class MyRob(CRobLinkAngs):
                     self.setReturningLed(False)
                 self.wander()
 
-            if self.firstRun:                               # Primeiro movimento
+            # Primeiro movimento, offset de gps
+            if self.firstRun:                               
                 if self.x is not None:
                     self.initialx = self.x                              # Receber coordenada X do GPS
                 if self.y is not None:
@@ -192,13 +211,17 @@ class MyRob(CRobLinkAngs):
             
             self.odometry_move_robot(self.motors)                                 # Movimento do robot calculado por odometria
             self.check_keyboard()
-            self.update_particle_filter(IRangles, state,  weight_calculation_method = self.wcm)    # Atualizar filtro de particulas
-            
+            self.update_particle_filter(IRangles, state,  weight_calculation_method = self.weight_calculation_method)    # Atualizar filtro de particulas
+    # ---------------------------------------------- End of Run Cycle ----------------------------------------------------------
+    
+    # ---------------------------------------------- Keyboard ------------------------------------------------------------------        
     # Verificar todos os ciclos se a ultima tecla é responsavel por alterar variaveis de controlo
     # Espaço - Condução (Automática/manual)
     def check_keyboard(self):
 
         if self.keyboard_variable == "Key.space":
+            logging.info(f'Key.space pressed: self.autorun changed\n')
+
             if self.autorun:
                 self.autorun = False
             else:
@@ -206,10 +229,12 @@ class MyRob(CRobLinkAngs):
             self.keyboard_variable = ""
         
         if self.keyboard_variable == "r":
+            logging.info(f'r pressed: filter_startover\n')
             self.keyboard_variable = ""  
             self.filter_startover = True
 
         if self.keyboard_variable == "f":
+            logging.info(f'f pressed: filter_runmode changed\n')
             self.keyboard_variable = ""     
             if self.filter_runmode == 0:
                 self.filter_runmode = 1
@@ -232,8 +257,10 @@ class MyRob(CRobLinkAngs):
             if self.keyboard_variable == "Key.right":
                 self.keyboard_variable = ""
                 self.key_right = True
+    # --------------------------------------------------End of Keyboard ---------------------------------------
 
-    # Função responsável por atualizar ao filtro de particulas todos os ciclos
+    # ------------------------------------------------- Particle Filter ---------------------------------------
+    # Função responsável por atualizar ao filtro de particulas todos os ciclos (Restart, Move, Weight_calc, Cluster, Draw, Resample, LOG)
     def update_particle_filter(self, IRangles, state, weight_calculation_method = 2):
         time_move_particles = 0
         time_weight_calculation = 0
@@ -241,7 +268,8 @@ class MyRob(CRobLinkAngs):
         time_resample = 0
         time_drawing = 0
         time_clustering = 0
-        
+
+        # Restart
         if self.filter_startover:
             self.filtro_particulas.createNewParticleSet()
             self.visualizer.clearImg()
@@ -252,6 +280,7 @@ class MyRob(CRobLinkAngs):
             self.filter_startover = False
 
         if(state != "stop"):
+            start_overall = time.perf_counter()
             self.visualizer.clearImg()
             # Mover particulas
             start = time.perf_counter()
@@ -290,33 +319,52 @@ class MyRob(CRobLinkAngs):
             # final_pose = self.filtro_particulas.getFinalPose()
             # self.visualizer.drawFinalPose(final_pose)
             if self.filtro_particulas.centroides is not None:
-                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights)
+                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights, self.filtro_particulas.centroides_cov)
             self.visualizer.showImg()
 
             # Resample
-            start = time.perf_counter()
-            if self.filter_runmode == 1:
-                self.filtro_particulas.sis_resample_gpt()      # Resample de particulas
-            end = time.perf_counter()
-            time_resample = 1000*(end-start)
+            if (self.movement_counter > self.movement_counter_trigger):
+                self.movement_counter = 0
+                start = time.perf_counter()
+                if self.filter_runmode == 1:
+                    self.filtro_particulas.sis_resample()      # Resample sistematico de particulas
+                    # self.filtro_particulas.resample()      # Resample aleatorio de particulas
+
+                end = time.perf_counter()
+                time_resample = 1000*(end-start)
             
 
-        # Fazer isto dentro do particleFilter ??? (antes de resample??)
-        erro = 'Nao calculado'
-        if(self.filtro_particulas.centroides_weights) is not None:
-            weight_centroide_mais_provavel = max(self.filtro_particulas.centroides_weights)
-            idx_centroide_mais_provavel = self.filtro_particulas.centroides_weights.index(weight_centroide_mais_provavel)
-            x_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][0]
-            y_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][1]
-            ori_mp = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel]
-            erro = (x_mp-self.posx-4.5, 14-y_mp-self.posy-11.5, ori_mp-self.ori)
+            # Fazer isto dentro do particleFilter ??? (antes de resample?? -> Indiferente!)
+            erro = 'Nao calculado'
+            if(self.filtro_particulas.centroides_weights) is not None:
+                weight_centroide_mais_provavel = max(self.filtro_particulas.centroides_weights)
+                idx_centroide_mais_provavel = self.filtro_particulas.centroides_weights.index(weight_centroide_mais_provavel)
+                x_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][0]
+                y_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][1]
+                ori_mp = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel]
+                erro = (x_mp-self.posx-4.5, 14-y_mp-self.posy-11.5, ori_mp-self.ori)
 
-        total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_clustering + time_drawing 
+            # ---------> LOG 
+            total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_clustering + time_drawing 
 
+            # print(f'tempo total = {total:.0f}ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
+            # print(f'Erro = x:{erro[0]:.2}, y:{erro[1]:.2}, ori:{erro[2]:.2}\n')
+            self.visualizer.saveImg()
+            logging.info(f'tempo total = {total:.0f}ms (Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
+            logging.info(f'Error from real->{erro[0]},{erro[1]},{erro[2]}')
+            logging.info(f'Centroids weights->{self.filtro_particulas.centroides_weights}')
+            logging.info(f'Centroids Covariances->{self.filtro_particulas.centroides_cov}')
+            logging.info(f'Effective number of particles->{self.filtro_particulas.effective_num_particles}')
 
-        print(f'tempo total = {total:.0f} ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
-        print(f'Erro = x:{erro[0]:.3}, y:{erro[1]:.3}, ori:{erro[2]:.3}\n')
+            logging.info(f'END of Cycle\n')
+            
+            end_overall = time.perf_counter()
+            time_overall = 1000*(end_overall-start_overall)
+            print(f'tempo total = {time_overall:.1f}')
+            # ---------> LOG END
+    # -------------------------------------------- End of Particle Filter ---------------------------------------
 
+    # -------------------------------------------- Movement and Sensor Data -------------------------------------
     def wander(self):
         center_id = 0
         left_id = 1
@@ -455,12 +503,14 @@ class MyRob(CRobLinkAngs):
             #     distancias.append(10)
         self.DISTsens = distancias
         # print(f'Center: {distancias[center_id]:.2f}\tLeft: {distancias[left_id]:.2f}\tRight: {distancias[right_id]:.2f}\tBack: {distancias[back_id]:.2f}')
+    # -------------------------------------------- End of Movement and Sensor Data -------------------------------------
 
-
+    # -------------------------------------------- Odometria do Robo ---------------------------------------------------
     def odometry_move_robot(self, motors):
         
-        self.motors = motors        
+        self.motors = motors
 
+        self.movement_counter += abs(self.motors[0])+abs(self.motors[1])       
         # calculate estimated power apply
         out_l = (self.motors[0] + self.last_motors[0]) / 2
         out_r = (self.motors[1] + self.last_motors[1]) / 2
@@ -484,7 +534,8 @@ class MyRob(CRobLinkAngs):
 
         self.x_od_pos = x # Posicao X por odometria
         self.y_od_pos = y # Posicao Y por odometria
-
+    # -------------------------------------------- End of Odometria do Robo ---------------------------------------------------
+    
 
             
 
@@ -534,8 +585,9 @@ for i in range(1, len(sys.argv),2):
         print("Unkown argument", sys.argv[i])
         quit()
 
+# ----------------------------- Main -------------------------
 if __name__ == '__main__':
-    IRangles = [0.0,75.0,-75.0,180.0]
+    IRangles = [0.0,75.0,-75.0,180.0] # Ajust IR angles here!!! Order:(Center,Left,Right,Back)
     rob=MyRob(rob_name,pos,IRangles,host)
     if mapc != None:
         rob.setMap(mapc.labMap)
