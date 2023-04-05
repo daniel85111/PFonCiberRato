@@ -327,7 +327,7 @@ class MyRob(CRobLinkAngs):
                 self.movement_counter = 0
                 start = time.perf_counter()
                 if self.filter_runmode == 1:
-                    self.filtro_particulas.sis_resample()      # Resample sistematico de particulas
+                    self.filtro_particulas.sistematic_resample()      # Resample sistematico de particulas
                     # self.filtro_particulas.resample()      # Resample aleatorio de particulas
 
                 end = time.perf_counter()
@@ -492,15 +492,10 @@ class MyRob(CRobLinkAngs):
             if v == 0: 
                 distancias.append(None)
                 return
+            
             distancias.append(1/v)
-            # if v != 0.0:
-            #     distancia = 1/v
-            #     if distancia < 6:
-            #         distancias.append(distancia)
-            #     else:
-            #         distancias.append(10)
-            # else:
-            #     distancias.append(10)
+            # distancias.append(10)
+
         self.DISTsens = distancias
         # print(f'Center: {distancias[center_id]:.2f}\tLeft: {distancias[left_id]:.2f}\tRight: {distancias[right_id]:.2f}\tBack: {distancias[back_id]:.2f}')
     # -------------------------------------------- End of Movement and Sensor Data -------------------------------------

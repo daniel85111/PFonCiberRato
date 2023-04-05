@@ -9,6 +9,8 @@ class map():
         self.scale = scale
         self.mapmax_x = mapmax_x
         self.mapmax_y = mapmax_y
+        self.x_offset = self.scale*self.mapmax_x
+        self.y_offset = self.scale*self.mapmax_y
 
         self.areas = self.calculateAreas()
         self.map_full, self.map_cropped, self.map_validation, self.map_validation_cropped = self.calculateMap() #Validation is solid. Used in resample
@@ -151,9 +153,10 @@ class map():
         return arr,cropped,arr_solid,cropped_solid
     
     def isValidLocation(self,x,y):
-        x = ceil(x)
-        y = ceil(y)
-        if self.map_validation[y][x] == 255:
+        idx = int(self.x_offset+self.scale*x)
+        idy = int(self.y_offset+self.scale*y)
+
+        if self.map_validation[idy][idx] == 255:
             return False
         else: 
             return True

@@ -141,7 +141,7 @@ double  cbBeaconSensor::sensorAperture    = M_PI;
 void CommandLineError()
 {
     QMessageBox::critical(0,"Error",
-		    "SYNOPSIS: simulator [--lab file] [--grid file] [--log file] [--param file] [--port portnumber] [--showgraph id] [--gps] [--beacon]",
+		    "SYNOPSIS: simulator [--lab file] [--grid file] [--log file] [--param file] [--port portnumber] [--showgraph id] [--gps] [--beacon]  [--seed number]",
 		    QMessageBox::Ok, Qt::NoButton, Qt::NoButton);
     exit(1);
 }
@@ -165,6 +165,12 @@ int main(int argc, char *argv[])
 	char *paramFilename = 0;
 	char *logFilename = 0;
 	int port = 6000;
+    int seed;  
+#ifndef MicWindows
+    seed = getpid();
+#else
+    seed = _getpid();
+#endif
 
 	bool showGraph=false;
 	int showGraphId=0;
@@ -234,7 +240,7 @@ int main(int argc, char *argv[])
                 p+=2;
             }
             else CommandLineError();
-	}
+	    }
         else if (strcmp(argv[p], "--scoring") == 0)	{
             if (p+1 < argc) {
                 int scoring;
@@ -243,7 +249,17 @@ int main(int argc, char *argv[])
                 p+=2;
             }
             else CommandLineError();
-	}
+	    }
+        else if (strcmp(argv[p], "--seed") == 0) {
+            fprintf(stderr,"seed\n");
+            if (p+1 < argc) {
+                seed = atoi(argv[p+1]);
+                p+=2;
+
+            }
+            else CommandLineError();
+
+		}   
         else {
             CommandLineError();
 		}
@@ -329,7 +345,17 @@ int main(int argc, char *argv[])
                 p+=2;
             }
             else CommandLineError();
-	}
+        }
+        else if (strcmp(argv[p], "--seed") == 0) {
+            fprintf(stderr,"seed\n");
+            if (p+1 < argc) {
+                seed = atoi(argv[p+1]);
+                p+=2;
+
+            }
+            else CommandLineError();
+
+		}      
         else {
             CommandLineError();
 		}
@@ -365,11 +391,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* preparing the random generator */
-#ifndef MicWindows
-	srand(getpid());
-#else
-	srand(_getpid());
-#endif
+	srand(seed);
+
 
         /* start simulator timer */
 	simulator.startTimer();
