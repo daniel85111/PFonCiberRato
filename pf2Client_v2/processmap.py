@@ -145,10 +145,11 @@ class map():
         cropped = arr[mapstarty:mapendy+1, mapstartx:mapendx+1]
         cropped_solid = arr_solid[mapstarty:mapendy+1, mapstartx:mapendx+1]
 
-        # cv2.imshow("Resized image", cropped)
-        # cv2.waitKey(0)
-        # plt.imshow(arr_solid)
-        # plt.show() 
+        # Para guardar imagem
+        # cropped_solid = cv2.bitwise_not(cropped_solid)
+        # cv2.imwrite("cropped_solid.jpg", cropped_solid)
+
+
 
         return arr,cropped,arr_solid,cropped_solid
     
@@ -175,8 +176,16 @@ class map():
         distmap_cropped = cv2.distanceTransform(cropped, cv2.DIST_L2, 5)/self.scale
         distmap_full = cv2.distanceTransform(full, cv2.DIST_L2, 5)/self.scale
 
+        # Para guardar imagem
+        	
+        # gray = cv2.cvtColor(distmap_cropped, cv2.COLOR_BGR2GRAY)
+        # distmap_cropped = cv2.bitwise_not(distmap_cropped)
+        # cv2.imshow("Map", gray)
+        # cv2.imwrite("distmap.jpg", gray)
+        # cv2.waitKey(0)
+
+        # Para ver imagem
+
         # plt.imshow(distmap_cropped)
         # plt.show()
-        # plt.imshow(distmap_full)
-        # plt.show() 
         return distmap_cropped, distmap_full

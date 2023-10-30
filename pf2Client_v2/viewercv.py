@@ -34,7 +34,8 @@ class ViewParticles():
 
         self.immax_x = self.imscale * map.mapmax_x
         self.immax_y = self.imscale * map.mapmax_y
-        self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8)      
+        self.img = np.zeros((self.immax_y,self.immax_x,3), np.uint8) 
+        self.img = cv2.bitwise_not(self.img)  
 
     # ---------------------------- Draw each Particle ------------------------
     def drawParticles(self, newParticles, max_weight):
@@ -136,8 +137,8 @@ class ViewParticles():
         
 
         # Draws of robot elements
-        cv2.circle(self.img,(int(cx),int(cy)), 20, (250,250,250), 2) # Circulo centrado no centro do robot real
-        cv2.line( self.img, (int(cx),int(cy)), (int(cx+radious*self.imscale*cos(ori)), int(cy-(radious*self.imscale*sin(ori)))), (255,255,255),2) # Linha do centro do robot direcionada segundo orientaçao
+        cv2.circle(self.img,(int(cx),int(cy)), 20, (0,0,0), 2) # Circulo centrado no centro do robot real
+        cv2.line( self.img, (int(cx),int(cy)), (int(cx+radious*self.imscale*cos(ori)), int(cy-(radious*self.imscale*sin(ori)))), (0,0,0),2) # Linha do centro do robot direcionada segundo orientaçao
 
         
         cv2.circle(self.img, (int(sensorDIST_left_posx),int(sensorDIST_left_posy)), 2, (0,0,253), -1)
@@ -156,11 +157,17 @@ class ViewParticles():
         
 
     def showImg(self):
+        # cv2.imshow("img",self.img)
+        img_not = cv2.bitwise_not(self.img)
         cv2.imshow("img",self.img)
+        # cv2.imshow("img",img_not)
+
+
         cv2.waitKey(1)
 
     def clearImg(self):
         self.img = np.zeros((560,1120,3), np.uint8)
+        self.img = cv2.bitwise_not(self.img)
     # ------------- End of Desenhar mapa ----------------
 
     # ------------- Image Log ---------------------
@@ -171,6 +178,7 @@ class ViewParticles():
         data_hora_formatada = data_hora_atual.strftime('%Y-%m-%d_%H-%M-%S')
         # Salva a imagem em um arquivo
         filename = os.path.join(directory, 'imagem_{}.jpg'.format(data_hora_formatada))
+        # img_not = cv2.bitwise_not(self.img)
         cv2.imwrite(filename, self.img)
 
     # ------------ End of Image Log ---------------

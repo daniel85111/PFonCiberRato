@@ -22,11 +22,18 @@ from pynput import keyboard
 CELLROWS=7
 CELLCOLS=14
 
+# 1 = Ativo; Outro = Inativo
+log = 1
+viewer = 0
+
+
 # Logs
-data_hora_atual = datetime.datetime.now()
-data_hora_formatada = data_hora_atual.strftime('%Y-%m-%d_%H-%M-%S')
-nome_arquivo = f"./pflogs/log_{data_hora_formatada}.txt"
-logging.basicConfig(filename=nome_arquivo, level=logging.DEBUG)
+if log == 1:
+    data_hora_atual = datetime.datetime.now()
+    data_hora_formatada = data_hora_atual.strftime('%Y-%m-%d_%H-%M-%S')
+    nome_arquivo = f"./pflogs/log_{data_hora_formatada}.txt"
+    logging.basicConfig(filename=nome_arquivo, level=logging.DEBUG,format='%(message)s')
+
 
 
 
@@ -64,8 +71,8 @@ class MyRob(CRobLinkAngs):
         self.rotation = 0
 
         # FILTRO de PARTICULAS
-        self.n_part = 1000  # Numero de particulas desejado no filtro 
-        self.weight_calculation_method = 4        # Weight calculation method
+        self.n_part = 50  # Numero de particulas desejado no filtro 
+        self.weight_calculation_method = 4        # Weight calculation method (3 = metodo1; 4 = metodo2)
 
         # ENDPOINTS number
         self.num_endpoints = 5
@@ -104,9 +111,11 @@ class MyRob(CRobLinkAngs):
         self.filtro_particulas = particleFilter.filtroParticulas(self.mapa, IRangles, self.num_endpoints, self.n_part)
 
 
-        self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-        self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
-        self.visualizer.showImg()
+        if viewer == 1:
+            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+            self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
+            self.visualizer.showImg()
+            self.visualizer.saveImg()
 
 
     # define a function to get input from the keyboard and put it into a queue
@@ -220,7 +229,7 @@ class MyRob(CRobLinkAngs):
     def check_keyboard(self):
 
         if self.keyboard_variable == "Key.space":
-            logging.info(f'Key.space pressed: self.autorun changed\n')
+            # logging.info(f'Key.space pressed: self.autorun changed\n')
 
             if self.autorun:
                 self.autorun = False
@@ -229,12 +238,12 @@ class MyRob(CRobLinkAngs):
             self.keyboard_variable = ""
         
         if self.keyboard_variable == "r":
-            logging.info(f'r pressed: filter_startover\n')
+            # logging.info(f'r pressed: filter_startover\n')
             self.keyboard_variable = ""  
             self.filter_startover = True
 
         if self.keyboard_variable == "f":
-            logging.info(f'f pressed: filter_runmode changed\n')
+            # logging.info(f'f pressed: filter_runmode changed\n')
             self.keyboard_variable = ""     
             if self.filter_runmode == 0:
                 self.filter_runmode = 1
@@ -272,16 +281,18 @@ class MyRob(CRobLinkAngs):
         # Restart
         if self.filter_startover:
             self.filtro_particulas.createNewParticleSet()
-            self.visualizer.clearImg()
-            self.visualizer.drawMap(self.mapa)
-            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-            self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
-            self.visualizer.showImg()
+            if viewer == 1:
+                self.visualizer.clearImg()
+                self.visualizer.drawMap(self.mapa)
+                self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+                self.visualizer.drawReal(self.x_od_pos, self.y_od_pos, self.ori, self.robot_diameter,  self.DISTsens, IRangles, self.num_endpoints)
+                self.visualizer.showImg()
             self.filter_startover = False
 
         if(state != "stop"):
             start_overall = time.perf_counter()
-            self.visualizer.clearImg()
+            if viewer == 1:
+                self.visualizer.clearImg()
             # Mover particulas
             start = time.perf_counter()
             self.filtro_particulas.odometry_move_particles(self.motors, self.motorsNoise, self.measures.collision)    # Mover particulas 
@@ -310,17 +321,19 @@ class MyRob(CRobLinkAngs):
 
             # Draw
             start = time.perf_counter()
-            self.visualizer.drawMap(self.mapa)
-            self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
-            self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles, self.num_endpoints)
+            if viewer == 1:
+                self.visualizer.drawMap(self.mapa)
+                self.visualizer.drawParticles(self.filtro_particulas.particulas, self.filtro_particulas.max_w)
+                self.visualizer.drawReal(self.posx, self.posy, self.ori, self.robot_diameter, self.DISTsens, IRangles, self.num_endpoints)
             end = time.perf_counter()
             time_drawing = 1000*(end-start)
 
             # final_pose = self.filtro_particulas.getFinalPose()
             # self.visualizer.drawFinalPose(final_pose)
-            if self.filtro_particulas.centroides is not None:
-                self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights, self.filtro_particulas.centroides_cov)
-            self.visualizer.showImg()
+            if viewer == 1:
+                if self.filtro_particulas.centroides is not None:
+                    self.visualizer.drawCentroides(self.filtro_particulas.centroides, self.filtro_particulas.centroides_oris, self.filtro_particulas.centroides_weights, self.filtro_particulas.centroides_cov)
+                self.visualizer.showImg()
 
             # Resample
             if (self.movement_counter > self.movement_counter_trigger):
@@ -336,31 +349,68 @@ class MyRob(CRobLinkAngs):
 
             # Fazer isto dentro do particleFilter ??? (antes de resample?? -> Indiferente!)
             erro = 'Nao calculado'
+            x_mp = 'Nao calculado'
+            y_mp = 'Nao calculado'
+            ori_mp = 'Nao calculado'
             if(self.filtro_particulas.centroides_weights) is not None:
+                centroides_count = len(self.filtro_particulas.centroides_weights)
                 weight_centroide_mais_provavel = max(self.filtro_particulas.centroides_weights)
                 idx_centroide_mais_provavel = self.filtro_particulas.centroides_weights.index(weight_centroide_mais_provavel)
+
                 x_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][0]
                 y_mp = self.filtro_particulas.centroides[idx_centroide_mais_provavel][1]
                 ori_mp = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel]
-                erro = (x_mp-self.posx-4.5, 14-y_mp-self.posy-11.5, ori_mp-self.ori)
+                
+                if centroides_count > 1:
+                    lista_sem_max = []
+                    for num in self.filtro_particulas.centroides_weights:
+                        if num != weight_centroide_mais_provavel:
+                            lista_sem_max.append(num)
+                        else:
+                            lista_sem_max.append(0)
+                    # lista_sem_max = [num for num in self.filtro_particulas.centroides_weights if num != weight_centroide_mais_provavel]
+                    weight_centroide_mais_provavel2 = max(lista_sem_max)
+                    idx_centroide_mais_provavel2 = lista_sem_max.index(weight_centroide_mais_provavel2)
+
+                    x_mp2 = self.filtro_particulas.centroides[idx_centroide_mais_provavel2][0]
+                    y_mp2 = self.filtro_particulas.centroides[idx_centroide_mais_provavel2][1]
+                    ori_mp2 = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel2]
+                else:
+                    x_mp2 = self.filtro_particulas.centroides[idx_centroide_mais_provavel][0]
+                    y_mp2 = self.filtro_particulas.centroides[idx_centroide_mais_provavel][1]
+                    ori_mp2 = self.filtro_particulas.centroides_oris[idx_centroide_mais_provavel]
+
+                # erro = (x_mp-self.posx-4.5, 14-y_mp-self.posy-11.5, ori_mp-self.ori)
 
             # ---------> LOG 
             total = time_move_particles + time_weight_calculation + time_weight_normalization + time_resample + time_clustering + time_drawing 
 
             # print(f'tempo total = {total:.0f}ms\n\t\t\t(Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
             # print(f'Erro = x:{erro[0]:.2}, y:{erro[1]:.2}, ori:{erro[2]:.2}\n')
-            self.visualizer.saveImg()
-            logging.info(f'tempo total = {total:.0f}ms (Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
-            logging.info(f'Error from real->{erro[0]},{erro[1]},{erro[2]}')
-            logging.info(f'Centroids weights->{self.filtro_particulas.centroides_weights}')
-            logging.info(f'Centroids Covariances->{self.filtro_particulas.centroides_cov}')
-            logging.info(f'Effective number of particles->{self.filtro_particulas.effective_num_particles}')
+            if viewer == 1:
+                self.visualizer.saveImg()
+            # logging.info(f'tempo de calculos = {total:.0f}ms (Resample: {(time_resample):.1f} | W_update: {(time_weight_calculation):.1f} | W_norm: {(time_weight_normalization):.1f} | Od_Move: {(time_move_particles):.1f} | CL: {(time_clustering):.1f})')
+            # logging.info(f'{total:.0f}\t')
+            
+            # logging.info(f'Centroide mais provavel (x,y,ori)->{x_mp:.2f},{y_mp:.2f},{ori_mp:.0f}')
+            # logging.info(f'{x_mp:.2f} {y_mp:.2f} {ori_mp:.0f}\t')
 
-            logging.info(f'END of Cycle\n')
+            # logging.info(f'Pose real (x,y,ori)->{self.posx-4.5:.2f},{self.posy-11.5:.2f},{self.ori:.0f}')
+            # logging.info(f'{self.posx-4.5:.2f} {self.posy-11.5:.2f} {self.ori:.0f}\t')
+
+
+            # logging.info(f'Error from real->{erro[0]},{erro[1]},{erro[2]}')
+            # logging.info(f'Centroids weights->{self.filtro_particulas.centroides_weights}')
+            # logging.info(f'Centroids Covariances->{self.filtro_particulas.centroides_cov}')
+            # logging.info(f'Effective number of particles->{self.filtro_particulas.effective_num_particles:.4f}')
+            # logging.info(f'{self.filtro_particulas.effective_num_particles:.4f}\t')
+
+            if log == 1:
+                logging.info(f'{self.measures.time} \t{total:.4f}\t{centroides_count}\t{x_mp:.4f} {y_mp:.4f} {ori_mp:.4f}\t{x_mp2:.4f} {y_mp2:.4f} {ori_mp2:.4f}\t{self.posx+4.5:.4f} {14-self.posy-11.5:.4f} {self.ori:.4f}\t{self.filtro_particulas.effective_num_particles:.4f}\n')
             
             end_overall = time.perf_counter()
             time_overall = 1000*(end_overall-start_overall)
-            print(f'tempo total = {time_overall:.1f}')
+            # print(f'tempo total = {time_overall:.1f}')
             # ---------> LOG END
     # -------------------------------------------- End of Particle Filter ---------------------------------------
 
@@ -370,7 +420,10 @@ class MyRob(CRobLinkAngs):
         left_id = 1
         right_id = 2
         back_id = 3
-
+        temporrestante = int(self.simTime)-self.measures.time
+        
+        if temporrestante <= 0:
+            exit()
         #Se estiver em modo automatico
         if self.autorun:
             if self.last_runmode == 0:
@@ -431,9 +484,9 @@ class MyRob(CRobLinkAngs):
 
                 if self.backwards_counter < 0:
                 # Utiliza 3 ciclos de simução na recuperação de colisão
-                    self.backwards_counter = 3
+                    self.backwards_counter = 5
                 lpow = -0.1
-                rpow = -0.1
+                rpow = -0.15
                 self.motors = (lpow, rpow) 
                 self.driveMotors(lpow,rpow)                     # Andar com velocidade constante (L = 0.1, R = 0.1)
                 self.backwards_counter -= 1

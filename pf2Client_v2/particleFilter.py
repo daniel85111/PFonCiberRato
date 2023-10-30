@@ -116,7 +116,7 @@ class filtroParticulas():
         # self.movement_counter_trigger = 0.25
         self.sum_squarednormalized_weights = 0
         # self.particulas = []
-        self.noise_multiplier = 6
+        self.noise_multiplier = 7
         self.particulas = np.empty(self.num_particles, dtype=particula)
         self.norm_weights = np.ones(self.num_particles)
         self.pesonorm = 1/self.num_particles
@@ -135,19 +135,33 @@ class filtroParticulas():
     # ----------------------------------------- Criação de novo conjunto de particulas  
     def createNewParticleSet(self):
         i = 0
-        while (i<self.num_particles):
-            xpos = np.random.random() * self.mapmax_x
-            ypos = np.random.random() * self.mapmax_y  
-            if not self.map.isValidLocation(xpos,ypos):
-                continue
+        X_mean = 4.5         # Coordenada inicial x
+        X_deviation = 0.2
+        Y_mean = 14-11.5          # Coordenada inicial Y 
+        Y_deviation = 0.1
 
-            #  Distribuicao e Orientacao aleatoria 
-            self.particulas[i] = particula(xpos, ypos, random.random()*360, 1, self.IRangles,self.num_endpoints)
-            i=i+1
+        while (i<self.num_particles):
+            # xpos = np.random.random() * self.mapmax_x
+            # ypos = np.random.random() * self.mapmax_y  
+            # if not self.map.isValidLocation(xpos,ypos):
+            #     continue
+            
+            # #  Distribuicao e Orientacao aleatoria 
+            # self.particulas[i] = particula(xpos, ypos, random.random()*360, 1, self.IRangles,self.num_endpoints)
+            # i=i+1
 
             # Distribuicao aleatoria e Orientacao 0
             # self.particulas[i] = particula(np.random.random() * self.mapmax_x, np.random.random() * self.mapmax_y, 0, 1, self.IRangles, self.num_endpoints)
+            
+            xpos = np.random.normal(X_mean, X_deviation, 1)
+            ypos = np.random.normal(Y_mean, Y_deviation, 1)
+            # if not self.map.isValidLocation(xpos,ypos):
+            #     continue
 
+             #  Distribuicao e Orientacao Gaussiana 
+            self.particulas[i] = particula(xpos[0], ypos[0], random.random()*360, 1, self.IRangles,self.num_endpoints)
+            i=i+1
+                
     # ----------------------------------------- Movimentacao das particulas com base na odometria do robo
     def odometry_move_particles(self, motors, motors_noise, collision):
         if collision:
@@ -556,9 +570,30 @@ class filtroParticulas():
                             idx = int(self.x_offset+self.map_scale_factor*posx)
                             idy = int(self.y_offset+self.map_scale_factor*posy)
                             distancemap_value = self.distance_map_full[idy,idx]
-                            pesosDIST.append(distancemap_value**2)
+                            # distancemap_value2 = None
+                            # if leitura > 1:
+                            #     if k == (particula.num_endpoints-1)/2:
+                            #         leitura = leitura/2
+                            #         angle = particula.endpoints_angle*k
+                            #         posx = particula.sensorDIST[j][1] + leitura*cos(particula.ori + particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+                            #         posy = particula.sensorDIST[j][2] - leitura*sin(particula.ori +  particula.sensorDIST[j][0] - particula.sensorDIST_apparture + angle)
+                        
+                            #         idx = int(self.x_offset+self.map_scale_factor*posx)
+                            #         idy = int(self.y_offset+self.map_scale_factor*posy)
+                            #         distancemap_value2 = self.distance_map_full[idy,idx]
+
+                            # if distancemap_value2 is None:
+                            #     pesosDIST.append(distancemap_value**2)
+                                
+                            # elif distancemap_value2 < distancemap_value:
+                            #     pesosDIST.append(2*distancemap_value**2)
+                            # else:
+                            #     pesosDIST.append(distancemap_value**2)    
+
+                            pesosDIST.append(distancemap_value**2)    
+                            
                         # print(pesosDIST)
-                        # Utilizar desvio padrão para o calculo dos pesos
+                        # Utilizar desvio padrão para o calculo dos pesos (????)
                         value = 0.5*min(pesosDIST)
                     else:
                         value = 0.5*acceptable_limit**2
@@ -689,7 +724,7 @@ class filtroParticulas():
         # ori = ori[indices]
 
         # Executar o clustering por DBSCAN
-        dbs = DBSCAN(eps=1, metric='l1', algorithm='auto') # default values: leaf_size=30, min_samples = 5
+        dbs = DBSCAN(eps=1, metric='l2', algorithm='auto') # default values: leaf_size=30, min_samples = 5
         dbs.fit(X)
 
         # Obter os rótulos das clusters e seus centróides
