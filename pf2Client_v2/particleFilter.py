@@ -399,7 +399,10 @@ class filtroParticulas():
      
     # ----------------------------------------------------- Calculo do peso atribuido a cada particula --------------------------------
     def weights_calculation(self, LINEsens, DISTsens, metodo):
+       # Aqui apenas se esta a utilizar o metodo 3 e 4 que corresponde ao metodo 1 e 2
+       # Os outros metodos foram testes de desenvolvimento
         # left1,left2,left3,center,right3,right2,right1 = LINEsens
+    
         centerDIST, leftDIST, rightDIST, backDIST = DISTsens
        
         if LINEsens == None : return

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Verifica se foi fornecido o argumento com a quantidade de repetições
+if [ -z "$1" ]; then
+  echo "Por favor, forneça a quantidade de repetições como argumento."
+  exit 1
+fi
+
+# Obtém a quantidade de repetições do primeiro argumento
+repeticoes=$1
+
+ARGS="--param ../Labs/2223-pf/C1-config.xml"
+ARGS+=" --lab ../Labs/2223-pf/C2-lab.xml"
+ARGS+=" --grid ../Labs/2223-pf/C4-grid.xml"
+
+#ARGS+=" --scoring 1"
+ARGS+=" --gps"
+ARGS+=" --compass"
+ARGS+=" --seed 4"
+
+# Loop para executar o código várias vezes
+for ((i = 1; i <= repeticoes; i++)); do
+  echo "Executando iteração $i"
+
+  (cd simulator; ./simulator $ARGS) &
+  sleep 2
+
+  (cd pf2Client_v2; ./s1.sh) &
+  s1_pid=$! # Armazena o PID do processo s1.sh
+  
+  sleep 2
+
+ (cd Viewer; ./Viewer --autoconnect --autostart) &
+
+  # Aguarda o término do processo s1.sh
+  wait $s1_pid
+
+  killall simulator
+  killall Viewer
+done
+
+echo "Todas as repetições foram concluídas. Bye"
